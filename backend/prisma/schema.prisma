@@ -1,0 +1,315 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String            @id @default(cuid())
+  email             String            @unique
+  username          String?           @unique
+  passwordHash      String
+  roles             Role[]            @default([APPLICANT])
+  clearanceLevel    ClearanceLevel    @default(PUBLIC)
+  department        String?
+  employmentStatus  String?
+  isActive          Boolean           @default(true)
+  isVerified        Boolean           @default(false)
+  mfaEnabled        Boolean           @default(false)
+  mfaSecret         String?
+  lastLoginAt       DateTime?
+  lastActivityAt    DateTime?
+  failedLoginCount  Int               @default(0)
+  lockedUntil       DateTime?
+  passwordChangedAt DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  deletedAt         DateTime?
+  grantedACLs       ACL[]             @relation("GrantedBy")
+  receivedACLs      ACL[]             @relation("GrantedTo")
+  profile           ApplicantProfile?
+  applications      Application[]
+  auditLogs         AuditLog[]
+  interviewPanels   InterviewPanel[]
+  sentInvitations   Invitation[]      @relation("SentInvitations")
+  ownedJobs         Job[]             @relation("JobOwner")
+  refreshTokens     RefreshToken[]
+
+  @@index([email])
+  @@index([roles])
+  @@index([department])
+  @@index([clearanceLevel])
+  @@index([isActive])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model ApplicantProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  fullName     String
+  phone        String?
+  linkedinUrl  String?
+  portfolioUrl String?
+  location     String?
+  resumeUrl    String?
+  resumeName   String?
+  resumeSize   Int?
+  documents    Json?
+  summary      String?
+  experience   Json?
+  education    Json?
+  skills       String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("applicant_profiles")
+}
+
+model Job {
+  id                  String        @id @default(cuid())
+  title               String
+  description         String
+  requirements        String?
+  responsibilities    String?
+  benefits            String?
+  category            String
+  location            String
+  employmentType      String
+  department          String?
+  experienceLevel     String?
+  salaryRange         String?
+  salaryMin           Decimal?      @db.Decimal(10, 2)
+  salaryMax           Decimal?      @db.Decimal(10, 2)
+  currency            String?       @default("USD")
+  status              JobStatus     @default(DRAFT)
+  ownerId             String
+  isRemote            Boolean       @default(false)
+  applicationDeadline DateTime?
+  openings            Int           @default(1)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  publishedAt         DateTime?
+  closedAt            DateTime?
+  applications        Application[]
+  owner               User          @relation("JobOwner", fields: [ownerId], references: [id])
+
+  @@index([status])
+  @@index([department])
+  @@index([ownerId])
+  @@index([category])
+  @@index([createdAt])
+  @@index([publishedAt])
+  @@map("jobs")
+}
+
+model Application {
+  id                   String            @id @default(cuid())
+  jobId                String
+  applicantId          String
+  status               ApplicationStatus @default(SUBMITTED)
+  currentStage         String?
+  rejectionReason      String?
+  coverLetter          String?
+  answers              Json?
+  internalNotes        String?
+  rating               Int?
+  tags                 String[]
+  interviewScheduledAt DateTime?
+  interviewCompletedAt DateTime?
+  interviewFeedback    Json?
+  offeredSalary        Decimal?          @db.Decimal(10, 2)
+  offerDetails         Json?
+  offerSentAt          DateTime?
+  offerAcceptedAt      DateTime?
+  offerRejectedAt      DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  applicant            User              @relation(fields: [applicantId], references: [id])
+  job                  Job               @relation(fields: [jobId], references: [id])
+  interviewPanels      InterviewPanel[]
+
+  @@unique([jobId, applicantId])
+  @@index([status])
+  @@index([jobId])
+  @@index([applicantId])
+  @@index([createdAt])
+  @@map("applications")
+}
+
+model InterviewPanel {
+  id            String      @id @default(cuid())
+  applicationId String
+  interviewerId String
+  feedback      String?
+  rating        Int?
+  recommend     Boolean?
+  notes         Json?
+  scheduledAt   DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  interviewer   User        @relation(fields: [interviewerId], references: [id])
+
+  @@unique([applicationId, interviewerId])
+  @@index([applicationId])
+  @@index([interviewerId])
+  @@map("interview_panels")
+}
+
+model Invitation {
+  id          String    @id @default(cuid())
+  email       String
+  role        Role
+  department  String?
+  invitedById String
+  token       String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+  invitedBy   User      @relation("SentInvitations", fields: [invitedById], references: [id])
+
+  @@index([token])
+  @@index([expiresAt])
+  @@map("invitations")
+}
+
+model ACL {
+  id           String    @id @default(cuid())
+  resourceType String
+  resourceId   String
+  granteeId    String
+  permission   String
+  grantedById  String
+  reason       String?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  grantor      User      @relation("GrantedBy", fields: [grantedById], references: [id])
+  grantee      User      @relation("GrantedTo", fields: [granteeId], references: [id], onDelete: Cascade)
+
+  @@unique([resourceType, resourceId, granteeId, permission])
+  @@index([granteeId])
+  @@index([resourceType, resourceId])
+  @@index([expiresAt])
+  @@map("acls")
+}
+
+model AuditLog {
+  id           String      @id @default(cuid())
+  userId       String?
+  username     String?
+  userRoles    String[]
+  action       AuditAction
+  resourceType String?
+  resourceId   String?
+  details      Json?
+  changes      Json?
+  ipAddress    String?
+  userAgent    String?
+  requestId    String?
+  method       String?
+  path         String?
+  statusCode   Int?
+  timestamp    DateTime    @default(now())
+  user         User?       @relation(fields: [userId], references: [id])
+
+  @@index([action])
+  @@index([timestamp])
+  @@index([userId])
+  @@index([resourceType, resourceId])
+  @@index([requestId])
+  @@map("audit_logs")
+}
+
+model RefreshToken {
+  id         String    @id @default(cuid())
+  userId     String
+  token      String    @unique
+  deviceId   String?
+  ipAddress  String?
+  userAgent  String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+enum Role {
+  APPLICANT
+  RECRUITER
+  INTERVIEWER
+  HR_MANAGER
+  AUDITOR
+  SYSTEM_ADMIN
+}
+
+enum ClearanceLevel {
+  PUBLIC
+  INTERNAL
+  CONFIDENTIAL
+  RESTRICTED
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
+  OFFER_PENDING
+  OFFERED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  HIRED
+}
+
+enum JobStatus {
+  DRAFT
+  OPEN
+  PAUSED
+  CLOSED
+  ARCHIVED
+}
+
+enum AuditAction {
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  LOGOUT
+  MFA_ENABLED
+  MFA_DISABLED
+  PASSWORD_CHANGED
+  PASSWORD_RESET_REQUESTED
+  PERMISSION_GRANTED
+  PERMISSION_REVOKED
+  ROLE_ASSIGNED
+  ROLE_REMOVED
+  CLEARANCE_CHANGED
+  RESOURCE_CREATED
+  RESOURCE_UPDATED
+  RESOURCE_DELETED
+  RESOURCE_VIEWED
+  ACCESS_DENIED
+  RATE_LIMIT_EXCEEDED
+  SUSPICIOUS_ACTIVITY
+  ACCOUNT_LOCKED
+  ACCOUNT_UNLOCKED
+  APPLICATION_SUBMITTED
+  APPLICATION_STATUS_CHANGED
+  FEEDBACK_SUBMITTED
+  OFFER_MADE
+  OFFER_ACCEPTED
+  OFFER_REJECTED
+}
