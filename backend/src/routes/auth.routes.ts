@@ -61,9 +61,28 @@ router.post(
   authRateLimit,
   validate({ body: registerSchema }),
   asyncHandler(async (req, res) => {
-    const { email, password, fullName } = req.body;
+    const { email, password, fullName, recaptchaToken } = req.body;
 
-    // TODO: Verify reCAPTCHA token in production
+    // Verify reCAPTCHA token
+    if (recaptchaToken) {
+      const { verifyRecaptcha } = await import('@/services/recaptcha.service.js');
+      const isValid = await verifyRecaptcha(recaptchaToken, req.ip);
+      if (!isValid) {
+        await createAuditLog(undefined, {
+          action: 'RESOURCE_CREATED',
+          resourceType: 'User',
+          details: { email, reason: 'reCAPTCHA verification failed' },
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent'],
+        });
+        return res.status(400).json({
+          error: {
+            code: 'RECAPTCHA_FAILED',
+            message: 'reCAPTCHA verification failed. Please try again.',
+          },
+        });
+      }
+    }
 
     const { userId } = await authService.register(email, password, fullName);
 
@@ -78,7 +97,8 @@ router.post(
     const response: ApiResponse = {
       data: {
         userId,
-        message: 'Registration successful. Please log in.',
+        message:
+          'Registration successful. Please check your email to verify your account before logging in.',
       },
       meta: {
         timestamp: new Date().toISOString(),
@@ -86,7 +106,7 @@ router.post(
       },
     };
 
-    res.status(201).json(response);
+    return res.status(201).json(response);
   })
 );
 
@@ -336,6 +356,176 @@ router.post(
     };
 
     res.json(response);
+  })
+);
+
+/**
+ * POST /auth/verify-email
+ * Verify email address with token
+ */
+router.post(
+  '/verify-email',
+  validate({
+    body: z.object({
+      token: z.string().min(1),
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    const { token } = req.body;
+
+    const verification = await prisma.emailVerificationToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
+
+    if (!verification) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_TOKEN',
+          message: 'Invalid or expired verification token',
+        },
+      });
+    }
+
+    if (verification.verifiedAt) {
+      return res.status(400).json({
+        error: {
+          code: 'ALREADY_VERIFIED',
+          message: 'Email already verified',
+        },
+      });
+    }
+
+    if (verification.expiresAt < new Date()) {
+      return res.status(400).json({
+        error: {
+          code: 'TOKEN_EXPIRED',
+          message: 'Verification token has expired',
+        },
+      });
+    }
+
+    // Verify email
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: verification.userId },
+        data: { isVerified: true },
+      }),
+      prisma.emailVerificationToken.update({
+        where: { id: verification.id },
+        data: { verifiedAt: new Date() },
+      }),
+    ]);
+
+    await createAuditLog(verification.userId, {
+      action: 'EMAIL_VERIFIED',
+      resourceType: 'User',
+      resourceId: verification.userId,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    const response: ApiResponse = {
+      data: {
+        message: 'Email verified successfully',
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        requestId: (req as AuthenticatedRequest).requestId,
+      },
+    };
+
+    return res.json(response);
+  })
+);
+
+/**
+ * POST /auth/resend-verification
+ * Resend email verification
+ */
+router.post(
+  '/resend-verification',
+  authRateLimit,
+  validate({
+    body: z.object({
+      email: emailSchema,
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      include: { emailVerification: true, profile: true },
+    });
+
+    if (!user) {
+      // Don't reveal if user exists
+      return res.json({
+        data: {
+          message: 'If an account exists with this email, a verification link has been sent.',
+        },
+      });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({
+        error: {
+          code: 'ALREADY_VERIFIED',
+          message: 'Email already verified',
+        },
+      });
+    }
+
+    // Generate new token
+    const { nanoid } = await import('nanoid');
+    const verificationToken = nanoid(64);
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Delete old token if exists
+    if (user.emailVerification) {
+      await prisma.emailVerificationToken.delete({
+        where: { id: user.emailVerification.id },
+      });
+    }
+
+    // Create new token
+    await prisma.emailVerificationToken.create({
+      data: {
+        userId: user.id,
+        token: verificationToken,
+        email: user.email,
+        expiresAt,
+      },
+    });
+
+    // Send verification email
+    const { sendVerificationEmail } = await import('@/services/email.service.js');
+    await sendVerificationEmail(
+      user.email,
+      user.profile?.fullName || user.email,
+      verificationToken
+    );
+
+    await createAuditLog(user.id, {
+      action: 'EMAIL_VERIFICATION_SENT',
+      resourceType: 'User',
+      resourceId: user.id,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    const response: ApiResponse = {
+      data: {
+        message: 'Verification email sent',
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        requestId: (req as AuthenticatedRequest).requestId,
+      },
+    };
+
+    return res.json(response);
   })
 );
 

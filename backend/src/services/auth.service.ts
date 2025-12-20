@@ -11,7 +11,7 @@ import { nanoid } from 'nanoid';
 import { prisma } from '@/config/database.js';
 import { sessionCache, SESSION_CACHE_TTL } from '@/config/redis.js';
 import { SECURITY } from '@/config/constants.js';
-import { logAudit, logSecurity } from '@/utils/logger.js';
+import { logger, logAudit, logSecurity } from '@/utils/logger.js';
 import {
   InvalidCredentialsError,
   AccountLockedError,
@@ -263,7 +263,7 @@ const checkAccountLockout = async (user: any): Promise<void> => {
 /**
  * Increment failed login attempts
  */
-const handleFailedLogin = async (userId: string): Promise<void> => {
+const handleFailedLogin = async (userId: string, ipAddress?: string): Promise<void> => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { failedLoginCount: true },
@@ -289,6 +289,17 @@ const handleFailedLogin = async (userId: string): Promise<void> => {
       severity: 'high',
       details: { reason: 'Too many failed login attempts', attempts: newCount },
     });
+
+    // Send alert on account lockout
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
+    if (user) {
+      const { alertAccountLocked } = await import('@/services/alert.service.js');
+      await alertAccountLocked(userId, user.email, 'Too many failed login attempts', ipAddress);
+    }
   }
 
   await prisma.user.update({
@@ -345,11 +356,24 @@ export const login = async (
     throw new AccountInactiveError();
   }
 
+  // Check email verification
+  if (!user.isVerified) {
+    logAudit({
+      userId: user.id,
+      action: 'LOGIN_FAILED',
+      details: { reason: 'Email not verified' },
+      ipAddress,
+      userAgent,
+      success: false,
+    });
+    throw new InvalidCredentialsError('Please verify your email address before logging in');
+  }
+
   // Verify password
   const isPasswordValid = await verifyPassword(password, user.passwordHash);
 
   if (!isPasswordValid) {
-    await handleFailedLogin(user.id);
+    await handleFailedLogin(user.id, ipAddress);
 
     logAudit({
       userId: user.id,
@@ -359,6 +383,20 @@ export const login = async (
       userAgent,
       success: false,
     });
+
+    // Alert on multiple failed logins
+    const failedCount =
+      (
+        await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { failedLoginCount: true },
+        })
+      )?.failedLoginCount || 0;
+
+    if (failedCount >= 3) {
+      const { alertFailedLogins } = await import('@/services/alert.service.js');
+      await alertFailedLogins(user.id, user.email, failedCount, ipAddress);
+    }
 
     throw new InvalidCredentialsError();
   }
@@ -491,7 +529,7 @@ export const register = async (
   email: string,
   password: string,
   fullName: string
-): Promise<{ userId: string }> => {
+): Promise<{ userId: string; verificationToken?: string }> => {
   // Validate password
   const passwordErrors = validatePasswordStrength(password);
   if (passwordErrors.length > 0) {
@@ -510,6 +548,10 @@ export const register = async (
   // Hash password
   const passwordHash = await hashPassword(password);
 
+  // Generate verification token
+  const verificationToken = nanoid(64);
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
   // Create user with profile
   const user = await prisma.user.create({
     data: {
@@ -517,11 +559,22 @@ export const register = async (
       passwordHash,
       roles: [Role.APPLICANT],
       clearanceLevel: ClearanceLevel.PUBLIC,
+      isVerified: false, // Require email verification
       profile: {
         create: {
           fullName,
         },
       },
+    },
+  });
+
+  // Create email verification token separately
+  await prisma.emailVerificationToken.create({
+    data: {
+      userId: user.id,
+      token: verificationToken,
+      email: email.toLowerCase(),
+      expiresAt,
     },
   });
 
@@ -533,5 +586,12 @@ export const register = async (
     success: true,
   });
 
-  return { userId: user.id };
+  // Send verification email (async, don't wait)
+  import('./email.service.js').then(({ sendVerificationEmail }) => {
+    sendVerificationEmail(email, fullName, verificationToken).catch(error => {
+      logger.error('Failed to send verification email', { error, userId: user.id });
+    });
+  });
+
+  return { userId: user.id, verificationToken };
 };

@@ -44,7 +44,7 @@ export const apiRateLimit = rateLimit({
   },
 
   // Custom handler
-  handler: (req: Request, _res: Response, next: NextFunction) => {
+  handler: async (req: Request, _res: Response, next: NextFunction) => {
     const authReq = req as AuthenticatedRequest;
 
     logSecurity({
@@ -58,6 +58,11 @@ export const apiRateLimit = rateLimit({
         method: req.method,
       },
     });
+
+    // Alert on rate limit exceeded
+    const { alertRateLimitExceeded } = await import('@/services/alert.service.js');
+    const identifier = authReq.user?.id || req.ip || 'unknown';
+    await alertRateLimitExceeded(identifier, req.path, SECURITY.RATE_LIMIT.MAX_REQUESTS, req.ip);
 
     const retryAfter = Math.ceil(SECURITY.RATE_LIMIT.WINDOW_MS / 1000);
     next(new RateLimitError('Rate limit exceeded', retryAfter));

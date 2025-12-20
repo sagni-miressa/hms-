@@ -38,6 +38,7 @@ model User {
   sentInvitations   Invitation[]      @relation("SentInvitations")
   ownedJobs         Job[]             @relation("JobOwner")
   refreshTokens     RefreshToken[]
+  emailVerification EmailVerificationToken? @relation("EmailVerifications")
 
   @@index([email])
   @@index([roles])
@@ -247,6 +248,22 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  token     String   @unique
+  email     String
+  expiresAt DateTime
+  verifiedAt DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation("EmailVerifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([email])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
+}
+
 enum Role {
   APPLICANT
   RECRUITER
@@ -312,4 +329,8 @@ enum AuditAction {
   OFFER_MADE
   OFFER_ACCEPTED
   OFFER_REJECTED
+  EMAIL_VERIFICATION_SENT
+  EMAIL_VERIFIED
+  EMAIL_VERIFICATION_FAILED
+  ALERT_TRIGGERED
 }

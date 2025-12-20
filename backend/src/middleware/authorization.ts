@@ -70,6 +70,22 @@ export const authorize = (options: {
 
       next();
     } catch (error) {
+      // Alert on unauthorized access attempt
+      const authReq = req as AuthenticatedRequest;
+      if (
+        error instanceof Error &&
+        (error.message.includes('permission') ||
+          error.message.includes('clearance') ||
+          error.message.includes('role'))
+      ) {
+        const { alertUnauthorizedAccess } = await import('@/services/alert.service.js');
+        await alertUnauthorizedAccess(
+          req.path,
+          authReq.user?.id,
+          req.ip,
+          req.headers['user-agent']
+        );
+      }
       next(error);
     }
   };

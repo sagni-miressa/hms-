@@ -5,6 +5,7 @@
 
 import { prisma } from '@/config/database.js';
 import { logger } from '@/utils/logger.js';
+import { encryptSensitiveFields } from '@/utils/logEncryption.js';
 import type { AuditLogData, PaginationParams, FilterParams } from '@/types/index.js';
 import { AuditAction } from '@prisma/client';
 
@@ -41,6 +42,14 @@ export const createAuditLog = async (
       }
     }
 
+    // Encrypt sensitive fields in details and changes
+    const encryptedDetails = data.details
+      ? (encryptSensitiveFields(data.details as Record<string, any>) as any)
+      : null;
+    const encryptedChanges = data.changes
+      ? (encryptSensitiveFields(data.changes as Record<string, any>) as any)
+      : null;
+
     await prisma.auditLog.create({
       data: {
         userId,
@@ -49,8 +58,8 @@ export const createAuditLog = async (
         action: data.action as AuditAction,
         resourceType: data.resourceType,
         resourceId: data.resourceId,
-        details: data.details as any,
-        changes: data.changes as any,
+        details: encryptedDetails,
+        changes: encryptedChanges,
         ipAddress: data.ipAddress,
         userAgent: data.userAgent,
         method: data.method,
