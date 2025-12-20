@@ -221,3 +221,4 @@ December 18, 2025
 ---
 
 **"This system protects people's careers and company reputation. Build it with paranoia, test it with malice, and maintain it with discipline."**
+# hms
