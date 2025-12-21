@@ -66,11 +66,11 @@ export const getApplications = async (
   if (filters?.sortBy) params.append("sortBy", filters.sortBy);
   if (filters?.sortOrder) params.append("sortOrder", filters.sortOrder);
 
-  const response = await api.get<ApiResponse<{ applications: Application[] }>>(
+  const response = await api.get<ApiResponse<Application[]>>(
     `/applications?${params.toString()}`
   );
 
-  const applications = extractData(response).applications;
+  const applications = extractData(response) || [];
   const pagination = extractPagination(response);
 
   return {

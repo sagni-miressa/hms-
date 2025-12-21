@@ -222,7 +222,7 @@ export const DashboardPage = () => {
                 View All
               </Link>
             </div>
-            {recentJobs.jobs.length === 0 ? (
+            {!recentJobs.jobs || recentJobs.jobs.length === 0 ? (
               <p className="text-gray-500">No jobs posted yet.</p>
             ) : (
               <div className="space-y-4">
@@ -258,7 +258,8 @@ export const DashboardPage = () => {
                 View All
               </Link>
             </div>
-            {myApplications.applications.length === 0 ? (
+            {!myApplications.applications ||
+            myApplications.applications.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-500 mb-4">
                   You haven't applied to any jobs yet.
@@ -318,7 +319,8 @@ export const DashboardPage = () => {
                 View All
               </Link>
             </div>
-            {allApplications.applications.length === 0 ? (
+            {!allApplications.applications ||
+            allApplications.applications.length === 0 ? (
               <p className="text-gray-500">No applications yet.</p>
             ) : (
               <div className="space-y-4">
