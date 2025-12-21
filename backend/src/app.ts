@@ -21,6 +21,7 @@ import { logger } from './utils/logger';
 import authRoutes from './routes/auth.routes';
 import jobsRoutes from './routes/jobs.routes';
 import applicationsRoutes from './routes/applications.routes';
+import systemRoutes from './routes/system.routes';
 
 // ============================================================================
 // EXPRESS APP INITIALIZATION
@@ -182,6 +183,7 @@ app.get('/health/ready', async (_req, res) => {
 app.use(`${API.PREFIX}/auth`, authRoutes);
 app.use(`${API.PREFIX}/jobs`, jobsRoutes);
 app.use(`${API.PREFIX}/applications`, applicationsRoutes);
+app.use(`${API.PREFIX}/system`, systemRoutes);
 
 // ============================================================================
 // ERROR HANDLING

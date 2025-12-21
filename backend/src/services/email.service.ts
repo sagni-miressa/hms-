@@ -11,29 +11,42 @@ import { logger } from '@/utils/logger.js';
 // ============================================================================
 
 const createTransporter = () => {
-  // For development, use ethereal.email or console logging
-  if (process.env.NODE_ENV === 'development' && !process.env.SMTP_HOST) {
-    return nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.ETHEREAL_USER || 'test@ethereal.email',
-        pass: process.env.ETHEREAL_PASS || 'test',
-      },
+  // Check if SMTP credentials are provided
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    logger.error('SMTP configuration incomplete. Email sending is disabled.', {
+      hasHost: !!process.env.SMTP_HOST,
+      hasUser: !!process.env.SMTP_USER,
+      hasPass: !!process.env.SMTP_PASS,
+      message: 'Please configure SMTP_HOST, SMTP_USER, and SMTP_PASS environment variables',
     });
+    return null;
   }
 
   // Production SMTP configuration
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      // Connection timeout
+      connectionTimeout: 10000,
+      // Greeting timeout
+      greetingTimeout: 10000,
+      // Socket timeout
+      socketTimeout: 10000,
+    });
+
+    logger.info('SMTP transporter created successfully');
+
+    return transporter;
+  } catch (error) {
+    logger.error('Failed to create SMTP transporter', { error });
+    return null;
+  }
 };
 
 const transporter = createTransporter();
@@ -42,7 +55,7 @@ const transporter = createTransporter();
 // EMAIL TEMPLATES
 // ============================================================================
 
-const getVerificationEmailTemplate = (name: string, token: string, baseUrl: string) => ({
+const getVerificationEmailTemplate = (name: string, code: string) => ({
   subject: 'Verify Your Email Address',
   html: `
     <!DOCTYPE html>
@@ -52,19 +65,23 @@ const getVerificationEmailTemplate = (name: string, token: string, baseUrl: stri
       <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .button { display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .code-container { background-color: #F3F4F6; border: 2px dashed #4F46E5; border-radius: 8px; padding: 20px; margin: 30px 0; text-align: center; }
+        .verification-code { font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4F46E5; font-family: 'Courier New', monospace; }
         .footer { margin-top: 30px; font-size: 12px; color: #666; }
+        .warning { color: #EF4444; font-weight: bold; }
       </style>
     </head>
     <body>
       <div class="container">
         <h2>Welcome to Hiring Management System!</h2>
         <p>Hi ${name},</p>
-        <p>Thank you for registering. Please verify your email address by clicking the button below:</p>
-        <a href="${baseUrl}/verify-email?token=${token}" class="button">Verify Email Address</a>
-        <p>Or copy and paste this link into your browser:</p>
-        <p>${baseUrl}/verify-email?token=${token}</p>
-        <p>This link will expire in 24 hours.</p>
+        <p>Thank you for registering. Please verify your email address using the 6-digit code below:</p>
+        <div class="code-container">
+          <p style="margin: 0 0 10px 0; color: #666;">Your verification code:</p>
+          <div class="verification-code">${code}</div>
+        </div>
+        <p class="warning">⚠️ This code will expire in 10 minutes.</p>
+        <p>Enter this code on the verification page to complete your registration.</p>
         <div class="footer">
           <p>If you didn't create this account, please ignore this email.</p>
         </div>
@@ -77,10 +94,13 @@ const getVerificationEmailTemplate = (name: string, token: string, baseUrl: stri
     
     Hi ${name},
     
-    Thank you for registering. Please verify your email address by visiting:
-    ${baseUrl}/verify-email?token=${token}
+    Thank you for registering. Please verify your email address using the following 6-digit code:
     
-    This link will expire in 24 hours.
+    ${code}
+    
+    This code will expire in 10 minutes.
+    
+    Enter this code on the verification page to complete your registration.
     
     If you didn't create this account, please ignore this email.
   `,
@@ -96,11 +116,10 @@ const getVerificationEmailTemplate = (name: string, token: string, baseUrl: stri
 export const sendVerificationEmail = async (
   email: string,
   name: string,
-  token: string
+  code: string
 ): Promise<void> => {
   try {
-    const baseUrl = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:5173';
-    const template = getVerificationEmailTemplate(name, token, baseUrl);
+    const template = getVerificationEmailTemplate(name, code);
 
     const mailOptions = {
       from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@hiring-system.com',
@@ -110,21 +129,62 @@ export const sendVerificationEmail = async (
       text: template.text,
     };
 
-    if (process.env.NODE_ENV === 'development' && !process.env.SMTP_HOST) {
-      // In development without SMTP, log the verification link
-      logger.info('Email verification (dev mode)', {
+    // Verify transporter is configured - throw error if not (configuration issue)
+    if (!transporter) {
+      const error = new Error(
+        'SMTP transporter not configured. Please set SMTP_HOST, SMTP_USER, and SMTP_PASS environment variables.'
+      );
+      logger.error('Cannot send verification email - SMTP not configured', {
         email,
-        verificationLink: `${baseUrl}/verify-email?token=${token}`,
+        error: error.message,
       });
-      return;
+      // In development, log the code to console for testing
+      if (process.env.NODE_ENV === 'development') {
+        console.log('\n========================================');
+        console.log('📧 EMAIL VERIFICATION CODE (NO SMTP)');
+        console.log('========================================');
+        console.log(`Email: ${email}`);
+        console.log(`Verification Code: ${code}`);
+        console.log('========================================\n');
+      }
+      throw error; // Configuration errors should propagate
     }
 
+    // Attempt to send email
     const info = await transporter.sendMail(mailOptions);
-    logger.info('Verification email sent', { email, messageId: info.messageId });
+
+    // Verify email was accepted
+    if (info.rejected && info.rejected.length > 0) {
+      logger.warn('Email was rejected by server', {
+        email,
+        rejected: info.rejected,
+        accepted: info.accepted,
+      });
+    }
+
+    logger.info('Verification email sent successfully', {
+      email,
+      messageId: info.messageId,
+      accepted: info.accepted,
+      rejected: info.rejected,
+    });
   } catch (error) {
-    logger.error('Failed to send verification email', { error, email });
-    // Don't throw - email sending failure shouldn't block registration
-    // In production, consider using a queue system
+    // Log all errors for monitoring
+    logger.error('Failed to send verification email', {
+      error,
+      email,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
+
+    // Re-throw configuration errors so they're visible to callers
+    // Network/transmission errors are logged but not re-thrown to avoid blocking registration
+    if (error instanceof Error && error.message.includes('SMTP transporter not configured')) {
+      throw error;
+    }
+    // Other errors (network issues, etc.) are logged but not thrown
+    // This allows registration to succeed even if email delivery temporarily fails
+    // In production, consider using a queue system for reliable email delivery
   }
 };
 
@@ -137,8 +197,8 @@ export const sendAlertEmail = async (
   message: string,
   severity: 'low' | 'medium' | 'high' | 'critical' = 'medium'
 ): Promise<void> => {
+  const recipients = Array.isArray(to) ? to : [to];
   try {
-    const recipients = Array.isArray(to) ? to : [to];
     const severityColors = {
       low: '#10B981',
       medium: '#F59E0B',
@@ -178,15 +238,52 @@ export const sendAlertEmail = async (
       text: `[${severity.toUpperCase()}] ${subject}\n\n${message}`,
     };
 
-    if (process.env.NODE_ENV === 'development' && !process.env.SMTP_HOST) {
-      logger.warn('Alert email (dev mode)', { to: recipients, subject, message, severity });
-      return;
+    // Verify transporter is configured - throw error if not (configuration issue)
+    if (!transporter) {
+      const error = new Error('SMTP transporter not configured. Cannot send alert email.');
+      logger.error('Cannot send alert email - SMTP not configured', {
+        to: recipients,
+        subject,
+        severity,
+        error: error.message,
+      });
+      throw error; // Configuration errors should propagate
     }
 
+    // Attempt to send email
     const info = await transporter.sendMail(mailOptions);
-    logger.info('Alert email sent', { to: recipients, subject, messageId: info.messageId });
+
+    // Verify email was accepted
+    if (info.rejected && info.rejected.length > 0) {
+      logger.warn('Alert email was rejected by server', {
+        to: recipients,
+        rejected: info.rejected,
+        accepted: info.accepted,
+      });
+    }
+
+    logger.info('Alert email sent successfully', {
+      to: recipients,
+      subject,
+      messageId: info.messageId,
+      accepted: info.accepted,
+      rejected: info.rejected,
+    });
   } catch (error) {
-    logger.error('Failed to send alert email', { error, to });
+    // Log all errors for monitoring
+    logger.error('Failed to send alert email', {
+      error,
+      to: recipients,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
+
+    // Re-throw configuration errors so they're visible to callers
+    if (error instanceof Error && error.message.includes('SMTP transporter not configured')) {
+      throw error;
+    }
+    // Other errors (network issues, etc.) are logged but not thrown
+    // Alert emails failing shouldn't break the application flow
   }
 };
 

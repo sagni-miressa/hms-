@@ -13,6 +13,7 @@ import { validate, emailSchema, passwordSchema } from '@/middleware/validation.j
 import { authRateLimit } from '@/middleware/rateLimit.js';
 import { asyncHandler } from '@/middleware/errorHandler.js';
 import { InvalidCredentialsError } from '@/utils/errors.js';
+import { logger } from '@/utils/logger.js';
 import type { AuthenticatedRequest, ApiResponse } from '@/types/index.js';
 
 const router = express.Router();
@@ -367,22 +368,27 @@ router.post(
   '/verify-email',
   validate({
     body: z.object({
-      token: z.string().min(1),
+      code: z.string().length(6).regex(/^\d+$/, 'Code must be 6 digits'),
+      email: emailSchema,
     }),
   }),
   asyncHandler(async (req, res) => {
-    const { token } = req.body;
+    const { code, email } = req.body;
 
-    const verification = await prisma.emailVerificationToken.findUnique({
-      where: { token },
+    // Find verification by code and email
+    const verification = await prisma.emailVerificationToken.findFirst({
+      where: {
+        token: code,
+        email: email.toLowerCase(),
+      },
       include: { user: true },
     });
 
     if (!verification) {
       return res.status(400).json({
         error: {
-          code: 'INVALID_TOKEN',
-          message: 'Invalid or expired verification token',
+          code: 'INVALID_CODE',
+          message: 'Invalid verification code',
         },
       });
     }
@@ -399,8 +405,8 @@ router.post(
     if (verification.expiresAt < new Date()) {
       return res.status(400).json({
         error: {
-          code: 'TOKEN_EXPIRED',
-          message: 'Verification token has expired',
+          code: 'CODE_EXPIRED',
+          message: 'Verification code has expired. Please request a new code.',
         },
       });
     }
@@ -477,10 +483,9 @@ router.post(
       });
     }
 
-    // Generate new token
-    const { nanoid } = await import('nanoid');
-    const verificationToken = nanoid(64);
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    // Generate new 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Delete old token if exists
     if (user.emailVerification) {
@@ -489,11 +494,11 @@ router.post(
       });
     }
 
-    // Create new token
+    // Create new verification code
     await prisma.emailVerificationToken.create({
       data: {
         userId: user.id,
-        token: verificationToken,
+        token: verificationCode, // Store 6-digit code in token field
         email: user.email,
         expiresAt,
       },
@@ -501,11 +506,20 @@ router.post(
 
     // Send verification email
     const { sendVerificationEmail } = await import('@/services/email.service.js');
-    await sendVerificationEmail(
-      user.email,
-      user.profile?.fullName || user.email,
-      verificationToken
-    );
+    try {
+      await sendVerificationEmail(
+        user.email,
+        user.profile?.fullName || user.email,
+        verificationCode
+      );
+    } catch (error) {
+      logger.error('Failed to send verification email in resend-verification', {
+        error,
+        userId: user.id,
+        email: user.email,
+      });
+      // Continue - don't fail the request, but log the error
+    }
 
     await createAuditLog(user.id, {
       action: 'EMAIL_VERIFICATION_SENT',

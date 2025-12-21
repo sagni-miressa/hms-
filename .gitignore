@@ -62,3 +62,15 @@ pnpm-debug.log*
 # Redis
 dump.rdb
 
+# Backups
+backups/
+*.sql
+*.rdb
+*.dump
+
+# Backend
+backend/.env.*
+
+# Frontend
+frontend/.env.*
+

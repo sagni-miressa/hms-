@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import app from './app.js';
 import { connectDatabase } from './config/database.js';
+import { initializeScheduler } from './services/scheduler.service.js';
+import { logger } from './utils/logger.js';
 
 const PORT = Number(process.env.PORT) || 5000;
 const HOST = process.platform === 'win32' ? '127.0.0.1' : '0.0.0.0';
@@ -24,8 +26,14 @@ if (!process.env.JWT_ACCESS_PUBLIC_KEY && !process.env.JWT_ACCESS_SECRET) {
 
 await connectDatabase();
 
+// Initialize scheduled tasks (backups, etc.)
+initializeScheduler();
+logger.info('Scheduled tasks initialized');
+
 const server = app.listen(PORT, HOST, () => {
+  logger.info('Server started', { port: PORT, host: HOST, environment: process.env.NODE_ENV });
   console.log('Server running on port: ', PORT);
+  
 });
 
 server.on('error', (error: NodeJS.ErrnoException) => {

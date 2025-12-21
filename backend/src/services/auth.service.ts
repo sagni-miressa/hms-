@@ -529,7 +529,7 @@ export const register = async (
   email: string,
   password: string,
   fullName: string
-): Promise<{ userId: string; verificationToken?: string }> => {
+): Promise<{ userId: string }> => {
   // Validate password
   const passwordErrors = validatePasswordStrength(password);
   if (passwordErrors.length > 0) {
@@ -548,9 +548,9 @@ export const register = async (
   // Hash password
   const passwordHash = await hashPassword(password);
 
-  // Generate verification token
-  const verificationToken = nanoid(64);
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  // Generate 6-digit verification code
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes (typical for codes)
 
   // Create user with profile
   const user = await prisma.user.create({
@@ -568,11 +568,11 @@ export const register = async (
     },
   });
 
-  // Create email verification token separately
+  // Create email verification code separately
   await prisma.emailVerificationToken.create({
     data: {
       userId: user.id,
-      token: verificationToken,
+      token: verificationCode, // Store 6-digit code in token field
       email: email.toLowerCase(),
       expiresAt,
     },
@@ -586,12 +586,27 @@ export const register = async (
     success: true,
   });
 
-  // Send verification email (async, don't wait)
-  import('./email.service.js').then(({ sendVerificationEmail }) => {
-    sendVerificationEmail(email, fullName, verificationToken).catch(error => {
-      logger.error('Failed to send verification email', { error, userId: user.id });
-    });
-  });
+  // Send verification email
+  // Use fire-and-forget pattern to not block registration, but ensure it's attempted
+  const { sendVerificationEmail } = await import('./email.service.js');
 
-  return { userId: user.id, verificationToken };
+  // Send email asynchronously - don't block registration response
+  // Errors are logged but don't fail the registration
+  sendVerificationEmail(email, fullName, verificationCode)
+    .then(() => {
+      logger.info('Verification email sent successfully', { userId: user.id, email });
+    })
+    .catch(error => {
+      logger.error('Failed to send verification email', {
+        error,
+        userId: user.id,
+        email,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+      });
+      // Log critical error but don't throw - registration should succeed even if email fails
+      // In production, consider using a queue system for reliable email delivery
+    });
+
+  return { userId: user.id };
 };

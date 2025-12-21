@@ -139,7 +139,30 @@ npm run dev
 | AUDITOR      | CONFIDENTIAL | Read-only access to all audit logs            |
 | SYSTEM_ADMIN | RESTRICTED   | Full system access, manage users              |
 
-## 📊 API Documentation
+## 📚 Documentation
+
+### Authentication & Security
+
+- **[Complete Authentication Guide](doc/AUTHENTICATION_COMPLETE_GUIDE.md)** - Comprehensive guide covering:
+
+  - Authentication setup and configuration
+  - End-to-end authentication flow
+  - Token management and refresh
+  - Frontend integration
+  - Security features and best practices
+  - Troubleshooting guide
+
+- **[Authentication Flow](doc/AUTHENTICATION_FLOW.md)** - Detailed technical flow documentation
+
+- **[Security Architecture](doc/SECURITY.md)** - Security architecture and guidelines
+
+- **[Environment Setup](doc/ENVIRONMENT_SETUP.md)** - Environment variables and configuration
+
+- **[Backup & Logging Setup](doc/BACKUP_AND_LOGGING_SETUP.md)** - Automated backups and centralized logging configuration
+
+- **[Testing Guide](doc/TESTING_GUIDE.md)** - Comprehensive step-by-step testing guide for all features and security requirements
+
+### API Documentation
 
 API documentation available at:
 
@@ -221,4 +244,5 @@ December 18, 2025
 ---
 
 **"This system protects people's careers and company reputation. Build it with paranoia, test it with malice, and maintain it with discipline."**
+
 # hms

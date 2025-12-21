@@ -1,6 +1,6 @@
 # Environment Variables Configuration Guide
 
-This guide explains how to configure SMTP, reCAPTCHA, and encryption keys for the ATS system.
+This guide explains how to configure SMTP, reCAPTCHA, and encryption keys for the ATS(Application Tracking System) system.
 
 ## 📁 Where to Configure
 
