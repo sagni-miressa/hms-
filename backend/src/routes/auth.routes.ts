@@ -517,8 +517,23 @@ router.post(
         error,
         userId: user.id,
         email: user.email,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
       });
-      // Continue - don't fail the request, but log the error
+
+      // If it's a configuration error (SMTP not configured), return an error response
+      if (error instanceof Error && error.message.includes('SMTP transporter not configured')) {
+        return res.status(503).json({
+          error: {
+            code: 'EMAIL_SERVICE_UNAVAILABLE',
+            message: 'Email service is not configured. Please contact support.',
+          },
+        });
+      }
+
+      // For other errors (network issues, etc.), still return success but log the error
+      // This allows the verification code to be created even if email delivery temporarily fails
+      // The user can still use the code if they have it from another source
     }
 
     await createAuditLog(user.id, {

@@ -138,15 +138,6 @@ export const sendVerificationEmail = async (
         email,
         error: error.message,
       });
-      // In development, log the code to console for testing
-      if (process.env.NODE_ENV === 'development') {
-        console.log('\n========================================');
-        console.log('📧 EMAIL VERIFICATION CODE (NO SMTP)');
-        console.log('========================================');
-        console.log(`Email: ${email}`);
-        console.log(`Verification Code: ${code}`);
-        console.log('========================================\n');
-      }
       throw error; // Configuration errors should propagate
     }
 
