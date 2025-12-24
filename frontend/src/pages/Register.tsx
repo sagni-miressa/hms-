@@ -100,13 +100,13 @@ export const RegisterPage = () => {
   return (
     <div className="flex min-h-screen w-full bg-recruit-bg-light">
       {/* Left Panel - Registration Form */}
-      <div className="flex w-full lg:w-1/2 flex-col justify-start px-8 py-12 sm:px-12 lg:px-24 xl:px-32 bg-white h-screen overflow-y-auto">
-        <div className=" flex items-center gap-3 mb-10">
+      <div className="flex w-full lg:w-1/2 flex-col justify-start px-8 py-12 sm:px-12 lg:px-24 xl:px-32 bg-white h-screen overflow-y-auto no-scrollbar">
+        <Link to="/" className=" flex items-center gap-3 mb-10">
           <div className="flex items-center justify-center size-8 rounded bg-primary-500/10 text-primary-500">
             <LogoIcon />
           </div>
           <h2 className="text-gray-900 text-lg font-bold">RecruitHub</h2>
-        </div>
+        </Link>
 
         <div className="w-full max-w-md mx-auto">
           <div className="mb-10">

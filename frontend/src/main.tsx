@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import App from './App';
 import './index.css';
+import { initThemeEffect } from './stores/theme/theme.effect';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -15,6 +16,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+initThemeEffect();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

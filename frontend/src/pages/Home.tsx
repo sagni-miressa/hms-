@@ -1,51 +1,100 @@
-import { Link } from 'react-router-dom';
+import { useState } from "react";
+import { HeroSection } from "@/components/home/HeroSection";
+import { StatsSection } from "@/components/home/StatsSection";
+import { FeatureTabs } from "@/components/home/FeatureTabs";
+import { FeatureGrid } from "@/components/home/FeatureGrid";
+import { Testimonials } from "@/components/home/Testimonials";
+import { FinalCTA } from "@/components/home/FinalCTA";
+import { Footer } from "@/components/home/Footer";
+import { Feature } from "@/types/feature";
+import { CandidateTeaserCard } from "@/components/home/CandidateTeaserCard";
 
 export const HomePage = () => {
+  const [activeTab, setActiveTab] = useState<"recruiters" | "applicants">(
+    "recruiters"
+  );
+
+  const recruiterFeatures: Feature[] = [
+    {
+      icon: "auto_graph",
+      title: "AI Resume Screening",
+      desc: "Save hours of manual review. Our AI automatically parses and ranks resumes based on job descriptions and key skills.",
+    },
+    {
+      icon: "view_kanban",
+      title: "Visual Pipelines",
+      desc: "Drag-and-drop candidates through custom hiring stages.",
+    },
+    {
+      icon: "calendar_month",
+      title: "Smart Scheduling",
+      desc: "Let candidates book interview slots that work for everyone.",
+    },
+    {
+      icon: "group_add",
+      title: "Collaborative Hiring",
+      desc: "Leave feedback and scorecards directly on profiles.",
+    },
+    {
+      icon: "analytics",
+      title: "Insightful Analytics",
+      desc: "Track time-to-hire and source quality.",
+    },
+    {
+      icon: "hub",
+      title: "Job Board Integration",
+      desc: "Post to 50+ job boards with one click.",
+    },
+  ];
+
+  const applicantFeatures: Feature[] = [
+    {
+      icon: "person_search",
+      title: "Job Matching",
+      desc: "Get matched with relevant opportunities.",
+    },
+    {
+      icon: "chat",
+      title: "Direct Chat",
+      desc: "Communicate directly with recruiters.",
+    },
+    {
+      icon: "update",
+      title: "Real-time Updates",
+      desc: "Track your application status.",
+    },
+    {
+      icon: "emoji_events",
+      title: "Career Growth",
+      desc: "Access career guidance and mentorship.",
+    },
+    {
+      icon: "work_outline",
+      title: "One-click Applications",
+      desc: "Apply faster with saved profile.",
+    },
+    {
+      icon: "badge",
+      title: "Verified Employers",
+      desc: "Work with trusted companies.",
+    },
+  ];
+
+  const features =
+    activeTab === "recruiters" ? recruiterFeatures : applicantFeatures;
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 sm:text-5xl md:text-6xl">
-          Find Your Dream Job
-        </h1>
-        <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
-          Enterprise-grade hiring platform with military-grade security. Built for companies that value talent and security.
-        </p>
-        <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
-          <Link to="/jobs" className="btn-primary w-full sm:w-auto">
-            Browse Jobs
-          </Link>
-          <Link to="/register" className="mt-3 sm:mt-0 sm:ml-3 btn-secondary w-full sm:w-auto">
-            Sign Up
-          </Link>
-        </div>
-      </div>
-      
-      <div className="mt-20">
-        <h2 className="text-3xl font-bold text-center text-gray-900 mb-10">
-          Why Choose Us?
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="card text-center">
-            <h3 className="text-xl font-semibold mb-3">🔒 Secure</h3>
-            <p className="text-gray-600">
-              Military-grade security with multi-layer access control and comprehensive audit logging.
-            </p>
-          </div>
-          <div className="card text-center">
-            <h3 className="text-xl font-semibold mb-3">⚡ Fast</h3>
-            <p className="text-gray-600">
-              Lightning-fast application process with real-time updates and notifications.
-            </p>
-          </div>
-          <div className="card text-center">
-            <h3 className="text-xl font-semibold mb-3">🎯 Efficient</h3>
-            <p className="text-gray-600">
-              Streamlined hiring workflow from application to offer with intelligent matching.
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="bg-background-light dark:bg-background-dark font-display">
+      <HeroSection />
+      <StatsSection />
+
+      <FeatureTabs activeTab={activeTab} onChange={setActiveTab} />
+      <FeatureGrid features={features} />
+      <CandidateTeaserCard />
+
+      <Testimonials />
+      <FinalCTA />
+      <Footer />
     </div>
   );
 };
-

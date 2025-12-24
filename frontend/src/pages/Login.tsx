@@ -117,12 +117,12 @@ export const LoginPage = () => {
       {/* Right Panel - Login Form */}
       <div className="flex w-full lg:w-1/2 flex-col justify-center px-8 py-12 sm:px-12 lg:px-24 xl:px-32 bg-white h-screen overflow-y-auto">
         {/* Logo */}
-        <div className="lg:hidden flex items-center gap-3 mb-10">
+        <Link to="/" className="flex items-center gap-3 mb-10">
           <div className="flex items-center justify-center size-8 rounded bg-primary-500/10 text-primary-500">
             <LogoIcon />
           </div>
           <h2 className="text-gray-900 text-lg font-bold">RecruitHub</h2>
-        </div>
+        </Link>
 
         <div className="w-full max-w-md mx-auto">
           <div className="mb-10 mx-auto text-center">

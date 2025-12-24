@@ -23,7 +23,7 @@ import { ResetPasswordPage } from "@/pages/ResetPassword";
 import { OAuthSuccessPage } from "@/pages/OAuthSuccess";
 import { JobsPage } from "@/pages/Jobs";
 import { JobDetailPage } from "@/pages/JobDetail";
-import { DashboardPage } from "@/pages/Dashboard";
+import { Dashboard } from "@/pages/Dashboard";
 import { ApplicationsPage } from "@/pages/Applications";
 import { SettingsPage } from "@/pages/Settings";
 import { MFASetupPage } from "@/pages/MFASetup";
@@ -120,7 +120,7 @@ export const Router = () => {
             </ProtectedRoute>
           }
         >
-          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/applications" element={<ApplicationsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/mfa" element={<MFASetupPage />} />
