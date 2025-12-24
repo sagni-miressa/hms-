@@ -23,8 +23,6 @@ services:
       POSTGRES_USER: hiring_user
       POSTGRES_PASSWORD: hiring_password_dev
       POSTGRES_DB: hiring_system
-    ports:
-      - "5433:5432"
     volumes:
       - postgres_replica_data:/var/lib/postgresql/data
     depends_on:
