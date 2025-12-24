@@ -152,7 +152,7 @@ SMTP_SECURE=false
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
 SMTP_FROM=noreply@yourdomain.com
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:3005
 
 # ============================================================================
 # ENVIRONMENT
@@ -240,7 +240,7 @@ Content-Type: application/json
 User receives email with verification link:
 
 ```
-http://localhost:5173/verify-email?token=abc123...
+http://localhost:3005/verify-email?token=abc123...
 ```
 
 #### Step 4: Verify Email

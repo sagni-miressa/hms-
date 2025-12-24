@@ -1,38 +1,29 @@
 /**
- * reCAPTCHA Service
- * Verifies reCAPTCHA tokens to prevent bot registrations
+ * reCAPTCHA Service (v2)
+ * Verifies reCAPTCHA v2 tokens to prevent bot registrations
  */
 
 import axios from 'axios';
 import { logger } from '@/utils/logger.js';
 
-// ============================================================================
-// RECAPTCHA CONFIGURATION
-// ============================================================================
-
 const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY;
 const RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify';
-
-// ============================================================================
-// RECAPTCHA VERIFICATION
-// ============================================================================
+const REQUEST_TIMEOUT = 5000;
 
 /**
- * Verify reCAPTCHA token
+ * Verify reCAPTCHA v2 token
+ * Production-ready: Always requires proper configuration and fails closed on errors
  */
 export const verifyRecaptcha = async (token: string, ipAddress?: string): Promise<boolean> => {
-  // Skip verification in development if secret key not set
   if (!RECAPTCHA_SECRET_KEY) {
-    if (process.env.NODE_ENV === 'development') {
-      logger.warn('reCAPTCHA verification skipped (no secret key in development)');
-      return true; // Allow in development
-    }
-    logger.error('reCAPTCHA secret key not configured');
+    logger.error(
+      'reCAPTCHA secret key not configured. Please set RECAPTCHA_SECRET_KEY environment variable.'
+    );
     throw new Error('reCAPTCHA verification not configured');
   }
 
-  if (!token) {
-    logger.warn('reCAPTCHA token missing');
+  if (!token?.trim()) {
+    logger.warn('reCAPTCHA token missing or empty');
     return false;
   }
 
@@ -43,36 +34,50 @@ export const verifyRecaptcha = async (token: string, ipAddress?: string): Promis
         response: token,
         remoteip: ipAddress,
       },
-      timeout: 5000,
+      timeout: REQUEST_TIMEOUT,
     });
 
-    const { success, score, action, challenge_ts, hostname } = response.data;
+    const { success, challenge_ts, hostname, 'error-codes': errorCodes } = response.data;
 
-    // Log verification attempt
-    logger.info('reCAPTCHA verification', {
+    logger.info('reCAPTCHA v2 verification', {
       success,
-      score,
-      action,
       hostname,
-      hasToken: !!token,
+      challenge_ts,
+      errorCodes,
+      ipAddress,
     });
 
-    // For reCAPTCHA v3, check score (0.0 to 1.0, higher is better)
-    // For reCAPTCHA v2, success is boolean
-    if (typeof score === 'number') {
-      // v3: Require score >= 0.5 (configurable)
-      const minScore = parseFloat(process.env.RECAPTCHA_MIN_SCORE || '0.5');
-      return success && score >= minScore;
+    if (errorCodes?.length > 0) {
+      logger.warn('reCAPTCHA API returned error codes', {
+        errorCodes,
+        tokenPrefix: token.substring(0, 10),
+      });
+      return false;
     }
 
-    // v2: Just check success
-    return success === true;
-  } catch (error) {
-    logger.error('reCAPTCHA verification failed', { error });
-    // Fail open in development, fail closed in production
-    if (process.env.NODE_ENV === 'development') {
-      return true;
+    // reCAPTCHA v2: Check success boolean
+    if (success !== true) {
+      logger.warn('reCAPTCHA v2 verification failed', { success });
+      return false;
     }
+
+    return true;
+  } catch (error) {
+    const errorDetails: Record<string, unknown> = {
+      message: error instanceof Error ? error.message : String(error),
+    };
+
+    if (error instanceof Error) {
+      errorDetails.stack = error.stack;
+    }
+
+    if (axios.isAxiosError(error)) {
+      errorDetails.isAxiosError = true;
+      errorDetails.responseStatus = error.response?.status;
+      errorDetails.responseData = error.response?.data;
+    }
+
+    logger.error('reCAPTCHA verification failed due to error', errorDetails);
     return false;
   }
 };

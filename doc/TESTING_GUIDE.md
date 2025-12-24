@@ -137,24 +137,215 @@ Backend API: http://localhost:5000/api/v1
 
 ### 1.3 reCAPTCHA (Bot Prevention)
 
+**Requirement**: Prevent bot registrations using Google reCAPTCHA
+
+**How It Works**:
+
+1. **Frontend Flow**:
+
+   - User completes reCAPTCHA challenge (v2 checkbox or v3 invisible)
+   - Google returns a token to the frontend
+   - Frontend sends this token in the `recaptchaToken` field during registration
+
+2. **Backend Verification**:
+
+   - Backend receives the token in the registration request
+   - Calls Google's verification API with:
+     - Secret key (from environment)
+     - Token (from frontend)
+     - User's IP address
+   - Google returns verification result with:
+     - `success`: boolean (true/false)
+     - `score`: number 0.0-1.0 (for v3 only, higher is better)
+     - `hostname`: domain where token was generated
+   - Backend validates:
+     - For v2: Checks if `success === true`
+     - For v3: Checks if `success === true` AND `score >= minScore` (default 0.5)
+
+3. **Configuration**:
+
+   - **Environment Variables**:
+     ```env
+     RECAPTCHA_SECRET_KEY=your-secret-key-here
+     RECAPTCHA_MIN_SCORE=0.5  # Optional, default 0.5 (for v3 only)
+     ```
+   - **Development Mode**: If `RECAPTCHA_SECRET_KEY` is not set:
+     - Development: Verification is skipped (returns `true`)
+     - Production: Registration will fail with error
+
+4. **Behavior**:
+   - Token is **optional** in the request (if not provided, verification is skipped)
+   - If token is provided, it **must** be valid
+   - Invalid tokens result in `RECAPTCHA_FAILED` error
+   - Network errors in development mode allow registration (fail-open)
+   - Network errors in production mode block registration (fail-closed)
+
 **Test Steps**:
 
-1. **Register with reCAPTCHA token** (if configured):
+#### Test 1: Registration Without reCAPTCHA (Development Mode)
 
-   ```bash
-   curl -X POST http://localhost:5000/api/v1/auth/register \
-     -H "Content-Type: application/json" \
-     -d '{
-       "email": "test2@example.com",
-       "password": "SecurePass123!@#",
-       "fullName": "Test User 2",
-       "recaptchaToken": "<valid-recaptcha-token>"
-     }'
-   ```
+When `RECAPTCHA_SECRET_KEY` is not set in development:
 
-2. **Test Invalid reCAPTCHA**:
-   - ❌ Invalid token → Should return `RECAPTCHA_FAILED`
-   - ❌ Missing token (if required) → Should fail
+```bash
+curl -X POST http://localhost:5000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test-no-captcha@example.com",
+    "password": "SecurePass123!@#",
+    "fullName": "Test User No Captcha"
+  }'
+```
+
+**Expected Result**:
+
+- ✅ Status: `201 Created` (registration succeeds)
+- ✅ Check server logs: Should see "reCAPTCHA verification skipped (no secret key in development)"
+
+#### Test 2: Registration With Valid reCAPTCHA Token
+
+**Prerequisites**:
+
+- Set up reCAPTCHA keys (see [Environment Setup Guide](../doc/ENVIRONMENT_SETUP.md))
+- Get a valid token from your frontend or Google's test tokens
+
+```bash
+curl -X POST http://localhost:5000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test-with-captcha@example.com",
+    "password": "SecurePass123!@#",
+    "fullName": "Test User With Captcha",
+    "recaptchaToken": "<valid-recaptcha-token-from-frontend>"
+  }'
+```
+
+**Expected Result**:
+
+- ✅ Status: `201 Created` (if token is valid)
+- ✅ Check server logs: Should see "reCAPTCHA verification" with success details
+
+#### Test 3: Registration With Invalid reCAPTCHA Token
+
+```bash
+curl -X POST http://localhost:5000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test-invalid-captcha@example.com",
+    "password": "SecurePass123!@#",
+    "fullName": "Test User Invalid",
+    "recaptchaToken": "invalid-token-12345"
+  }'
+```
+
+**Expected Result**:
+
+- ❌ Status: `400 Bad Request`
+- ❌ Error code: `RECAPTCHA_FAILED`
+- ❌ Error message: "reCAPTCHA verification failed. Please try again."
+- ✅ Audit log created with reason: "reCAPTCHA verification failed"
+
+#### Test 4: Registration With Expired reCAPTCHA Token
+
+reCAPTCHA tokens expire after ~2 minutes. Test with an old token:
+
+```bash
+# Use a token that was generated more than 2 minutes ago
+curl -X POST http://localhost:5000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test-expired-captcha@example.com",
+    "password": "SecurePass123!@#",
+    "fullName": "Test User Expired",
+    "recaptchaToken": "<expired-token>"
+  }'
+```
+
+**Expected Result**:
+
+- ❌ Status: `400 Bad Request`
+- ❌ Error code: `RECAPTCHA_FAILED`
+
+#### Test 5: reCAPTCHA v3 Score Validation
+
+For reCAPTCHA v3, test with different scores:
+
+```bash
+# Test with low score (should fail if minScore is 0.5)
+curl -X POST http://localhost:5000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test-low-score@example.com",
+    "password": "SecurePass123!@#",
+    "fullName": "Test User Low Score",
+    "recaptchaToken": "<token-with-low-score>"
+  }'
+```
+
+**Expected Result**:
+
+- If score < `RECAPTCHA_MIN_SCORE`: ❌ Status `400` with `RECAPTCHA_FAILED`
+- If score >= `RECAPTCHA_MIN_SCORE`: ✅ Status `201 Created`
+
+#### Test 6: Missing Token (Optional Behavior)
+
+```bash
+curl -X POST http://localhost:5000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test-no-token@example.com",
+    "password": "SecurePass123!@#",
+    "fullName": "Test User No Token"
+  }'
+```
+
+**Expected Result**:
+
+- ✅ Status: `201 Created` (registration succeeds)
+- ℹ️ Note: Token is optional, so missing token doesn't cause failure
+
+#### Test 7: Network Error Handling
+
+To test network error handling, you can temporarily block Google's API or use an invalid verification URL.
+
+**Expected Behavior**:
+
+- **Development**: Registration succeeds (fail-open)
+- **Production**: Registration fails (fail-closed)
+
+#### Test 8: Verify Server Logs
+
+Check server logs for reCAPTCHA verification details:
+
+```bash
+# Look for log entries like:
+# "reCAPTCHA verification" with fields:
+# - success: boolean
+# - score: number (for v3)
+# - action: string
+# - hostname: string
+```
+
+**Verification Checklist**:
+
+- [ ] Registration without token works in development
+- [ ] Registration with valid token succeeds
+- [ ] Registration with invalid token fails with `RECAPTCHA_FAILED`
+- [ ] Registration with expired token fails
+- [ ] reCAPTCHA v3 score validation works correctly
+- [ ] Server logs show verification attempts
+- [ ] Audit logs record failed verification attempts
+- [ ] IP address is sent to Google for verification
+
+**Google reCAPTCHA Test Keys**:
+
+For testing, Google provides test keys that always pass:
+
+- **Site Key (v2)**: `6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI`
+- **Secret Key (v2)**: `6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe`
+- **Site Key (v3)**: `6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI`
+- **Secret Key (v3)**: `6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe`
+
+**Note**: These test keys always return `success: true` and score `0.9` for v3, regardless of the actual user interaction.
 
 ---
 

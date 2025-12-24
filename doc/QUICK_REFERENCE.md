@@ -11,7 +11,7 @@ npm run dev                          # Start servers
 **Access**:
 
 - Backend: http://localhost:3000
-- Frontend: http://localhost:5173
+- Frontend: http://localhost:3005
 - Health: http://localhost:3000/health
 
 ## Test Credentials
@@ -141,7 +141,7 @@ VITE_API_URL=http://localhost:3000/api/v1
 ```bash
 # Port in use?
 lsof -i :3000  # Backend
-lsof -i :5173  # Frontend
+lsof -i :3005  # Frontend
 
 # Database not connecting?
 docker-compose ps postgres

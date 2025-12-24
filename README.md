@@ -126,7 +126,7 @@ npm run dev
 ```
 
 - Backend: http://localhost:3000
-- Frontend: http://localhost:5173
+- Frontend: http://localhost:3005
 
 ## 🔑 User Roles
 

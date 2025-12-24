@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f8f7f6;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .logo {
+      color: #ec7f13;
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    h2 {
+      color: #221910;
+      margin-top: 0;
+      font-size: 24px;
+    }
+    .code-container {
+      background-color: #fef7ed;
+      border: 2px dashed #ec7f13;
+      border-radius: 8px;
+      padding: 30px 20px;
+      margin: 30px 0;
+      text-align: center;
+    }
+    .verification-code {
+      font-size: 36px;
+      font-weight: bold;
+      letter-spacing: 12px;
+      color: #ec7f13;
+      font-family: 'Courier New', monospace;
+      margin: 10px 0;
+    }
+    .code-label {
+      margin: 0 0 15px 0;
+      color: #914711;
+      font-size: 14px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #f3f4f6;
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+    }
+    .warning {
+      color: #b2590c;
+      font-weight: 500;
+      margin: 20px 0;
+      padding: 12px;
+      background-color: #fef7ed;
+      border-left: 3px solid #ec7f13;
+      border-radius: 4px;
+    }
+    .button {
+      display: inline-block;
+      padding: 14px 32px;
+      background-color: #ec7f13;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      margin: 20px 0;
+      transition: background-color 0.2s;
+    }
+    .button:hover {
+      background-color: #d66e0b;
+    }
+    p {
+      margin: 15px 0;
+      color: #4b5563;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">Hiring Management System</div>
+    </div>
+    <h2>Welcome to Hiring Management System!</h2>
+    <p>Hi {{name}},</p>
+    <p>Thank you for registering. Please verify your email address using the 6-digit code below:</p>
+    <div class="code-container">
+      <p class="code-label">Your verification code</p>
+      <div class="verification-code">{{code}}</div>
+    </div>
+    <div class="warning">
+      ⚠️ This code will expire in 10 minutes.
+    </div>
+    <p>Enter this code on the verification page to complete your registration.</p>
+    <div class="footer">
+      <p>If you didn't create this account, please ignore this email.</p>
+      <p style="margin-top: 10px; color: #9ca3af;">© Hiring Management System. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+

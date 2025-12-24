@@ -27,6 +27,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   fullName: string;
+  recaptchaToken?: string;
 }
 
 export interface RegisterResponse {
@@ -100,4 +101,59 @@ export const changePassword = async (
     currentPassword,
     newPassword,
   });
+};
+
+/**
+ * Verify email with code
+ */
+export const verifyEmail = async (data: {
+  code: string;
+  email: string;
+}): Promise<{ message: string }> => {
+  const response = await api.post<ApiResponse<{ message: string }>>(
+    "/auth/verify-email",
+    data
+  );
+  return extractData(response);
+};
+
+/**
+ * Resend verification email
+ */
+export const resendVerification = async (
+  email: string
+): Promise<{ message: string }> => {
+  const response = await api.post<ApiResponse<{ message: string }>>(
+    "/auth/resend-verification",
+    { email }
+  );
+  return extractData(response);
+};
+
+/**
+ * Request password reset (forgot password)
+ */
+export const forgotPassword = async (
+  email: string
+): Promise<{ message: string }> => {
+  const response = await api.post<ApiResponse<{ message: string }>>(
+    "/auth/password/forgot",
+    { email }
+  );
+  return extractData(response);
+};
+
+/**
+ * Reset password with token
+ */
+export const resetPassword = async (data: {
+  token: string;
+  email: string;
+  newPassword: string;
+}): Promise<{ message: string }> => {
+  const response = await api.post<ApiResponse<{ message: string }>>(
+    "/auth/password/reset",
+    data
+  );
+  return extractData(response);
 };

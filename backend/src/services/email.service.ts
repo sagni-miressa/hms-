@@ -4,7 +4,15 @@
  */
 
 import nodemailer from 'nodemailer';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { logger } from '@/utils/logger.js';
+
+// Get current directory for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const templatesDir = join(__dirname, '..', 'templates');
 
 // ============================================================================
 // EMAIL CONFIGURATION
@@ -55,41 +63,64 @@ const transporter = createTransporter();
 // EMAIL TEMPLATES
 // ============================================================================
 
-const getVerificationEmailTemplate = (name: string, code: string) => ({
-  subject: 'Verify Your Email Address',
-  html: `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .code-container { background-color: #F3F4F6; border: 2px dashed #4F46E5; border-radius: 8px; padding: 20px; margin: 30px 0; text-align: center; }
-        .verification-code { font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4F46E5; font-family: 'Courier New', monospace; }
-        .footer { margin-top: 30px; font-size: 12px; color: #666; }
-        .warning { color: #EF4444; font-weight: bold; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h2>Welcome to Hiring Management System!</h2>
-        <p>Hi ${name},</p>
-        <p>Thank you for registering. Please verify your email address using the 6-digit code below:</p>
-        <div class="code-container">
-          <p style="margin: 0 0 10px 0; color: #666;">Your verification code:</p>
-          <div class="verification-code">${code}</div>
-        </div>
-        <p class="warning">⚠️ This code will expire in 10 minutes.</p>
-        <p>Enter this code on the verification page to complete your registration.</p>
-        <div class="footer">
-          <p>If you didn't create this account, please ignore this email.</p>
-        </div>
-      </div>
-    </body>
-    </html>
+/**
+ * Load and render email template with variables
+ */
+const loadTemplate = (filename: string, variables: Record<string, string>): string => {
+  try {
+    const templatePath = join(templatesDir, filename);
+    let html = readFileSync(templatePath, 'utf-8');
+
+    // Replace template variables
+    Object.entries(variables).forEach(([key, value]) => {
+      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+      html = html.replace(regex, value);
+    });
+
+    return html;
+  } catch (error) {
+    logger.error(`Failed to load email template: ${filename}`, { error });
+    throw new Error(`Failed to load email template: ${filename}`);
+  }
+};
+
+const getPasswordResetEmailTemplate = (name: string, resetLink: string) => {
+  const html = loadTemplate('password-reset-email.html', {
+    name,
+    resetLink,
+  });
+
+  return {
+    subject: 'Reset Your Password',
+    html,
+    text: `
+    Password Reset Request
+    
+    Hi ${name},
+    
+    We received a request to reset your password. Click the link below to reset it:
+    
+    ${resetLink}
+    
+    This link will expire in 1 hour.
+    
+    If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
+    
+    For security reasons, this link can only be used once.
   `,
-  text: `
+  };
+};
+
+const getVerificationEmailTemplate = (name: string, code: string) => {
+  const html = loadTemplate('verification-email.html', {
+    name,
+    code,
+  });
+
+  return {
+    subject: 'Verify Your Email Address',
+    html,
+    text: `
     Welcome to Hiring Management System!
     
     Hi ${name},
@@ -104,7 +135,8 @@ const getVerificationEmailTemplate = (name: string, code: string) => ({
     
     If you didn't create this account, please ignore this email.
   `,
-});
+  };
+};
 
 // ============================================================================
 // EMAIL SENDING FUNCTIONS
@@ -180,6 +212,72 @@ export const sendVerificationEmail = async (
 };
 
 /**
+ * Send password reset email
+ */
+export const sendPasswordResetEmail = async (
+  email: string,
+  name: string,
+  resetLink: string
+): Promise<void> => {
+  try {
+    const template = getPasswordResetEmailTemplate(name, resetLink);
+
+    const mailOptions = {
+      from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@hiring-system.com',
+      to: email,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    };
+
+    // Verify transporter is configured - throw error if not (configuration issue)
+    if (!transporter) {
+      const error = new Error(
+        'SMTP transporter not configured. Please set SMTP_HOST, SMTP_USER, and SMTP_PASS environment variables.'
+      );
+      logger.error('Cannot send password reset email - SMTP not configured', {
+        email,
+        error: error.message,
+      });
+      throw error; // Configuration errors should propagate
+    }
+
+    // Attempt to send email
+    const info = await transporter.sendMail(mailOptions);
+
+    // Verify email was accepted
+    if (info.rejected && info.rejected.length > 0) {
+      logger.warn('Password reset email was rejected by server', {
+        email,
+        rejected: info.rejected,
+        accepted: info.accepted,
+      });
+    }
+
+    logger.info('Password reset email sent successfully', {
+      email,
+      messageId: info.messageId,
+      accepted: info.accepted,
+      rejected: info.rejected,
+    });
+  } catch (error) {
+    // Log all errors for monitoring
+    logger.error('Failed to send password reset email', {
+      error,
+      email,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
+
+    // Re-throw configuration errors so they're visible to callers
+    if (error instanceof Error && error.message.includes('SMTP transporter not configured')) {
+      throw error;
+    }
+    // Other errors (network issues, etc.) are logged but not thrown
+  }
+};
+
+/**
  * Send alert email
  */
 export const sendAlertEmail = async (
@@ -190,42 +288,41 @@ export const sendAlertEmail = async (
 ): Promise<void> => {
   const recipients = Array.isArray(to) ? to : [to];
   try {
-    const severityColors = {
-      low: '#10B981',
-      medium: '#F59E0B',
-      high: '#EF4444',
-      critical: '#DC2626',
+    // Severity colors matching system theme
+    const severityConfig = {
+      low: {
+        color: '#10B981',
+        bg: '#ecfdf5',
+      },
+      medium: {
+        color: '#ec7f13', // Primary orange
+        bg: '#fef7ed',
+      },
+      high: {
+        color: '#f4993c', // Primary orange-400
+        bg: '#fef7ed',
+      },
+      critical: {
+        color: '#b2590c', // Primary orange-700
+        bg: '#fff5eb',
+      },
     };
+
+    const config = severityConfig[severity];
+
+    const html = loadTemplate('alert-email.html', {
+      severity: severity.toUpperCase(),
+      subject,
+      message,
+      severityColor: config.color,
+      severityBg: config.bg,
+    });
 
     const mailOptions = {
       from: process.env.SMTP_FROM || process.env.SMTP_USER || 'alerts@hiring-system.com',
       to: recipients.join(', '),
       subject: `[${severity.toUpperCase()}] ${subject}`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .alert { padding: 15px; border-left: 4px solid ${severityColors[severity]}; background-color: #F9FAFB; margin: 20px 0; }
-            .severity { display: inline-block; padding: 4px 8px; background-color: ${severityColors[severity]}; color: white; border-radius: 3px; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h2>Security Alert</h2>
-            <div class="alert">
-              <span class="severity">${severity.toUpperCase()}</span>
-              <h3>${subject}</h3>
-              <p>${message}</p>
-            </div>
-            <p>This is an automated alert from the Hiring Management System.</p>
-          </div>
-        </body>
-        </html>
-      `,
+      html,
       text: `[${severity.toUpperCase()}] ${subject}\n\n${message}`,
     };
 
@@ -280,5 +377,6 @@ export const sendAlertEmail = async (
 
 export default {
   sendVerificationEmail,
+  sendPasswordResetEmail,
   sendAlertEmail,
 };

@@ -63,26 +63,26 @@ npm run dev
 ```
 
 **Backend**: http://localhost:3000  
-**Frontend**: http://localhost:5173  
+**Frontend**: http://localhost:3005  
 **Health Check**: http://localhost:3000/health
 
 ## 🔐 Test Credentials
 
 After seeding, use these credentials:
 
-| Role | Email | Password |
-|------|-------|----------|
-| **Admin** | admin@hiring-system.com | Admin@123456 |
-| **HR Manager** | hr@hiring-system.com | HRManager@123 |
-| **Recruiter** | recruiter@hiring-system.com | Recruiter@123 |
+| Role            | Email                         | Password        |
+| --------------- | ----------------------------- | --------------- |
+| **Admin**       | admin@hiring-system.com       | Admin@123456    |
+| **HR Manager**  | hr@hiring-system.com          | HRManager@123   |
+| **Recruiter**   | recruiter@hiring-system.com   | Recruiter@123   |
 | **Interviewer** | interviewer@hiring-system.com | Interviewer@123 |
-| **Applicant** | applicant@example.com | Applicant@123 |
+| **Applicant**   | applicant@example.com         | Applicant@123   |
 
 ## 📋 Verification Checklist
 
 - [ ] Docker services running (`docker-compose ps`)
 - [ ] Backend health check returns 200 (`curl http://localhost:3000/health`)
-- [ ] Frontend loads at http://localhost:5173
+- [ ] Frontend loads at http://localhost:3005
 - [ ] Can login with test credentials
 - [ ] Database has seed data (check Prisma Studio: `npx prisma studio`)
 
@@ -137,6 +137,7 @@ Opens at http://localhost:5555
 ### API Testing
 
 Use the included test credentials with tools like:
+
 - Postman
 - Insomnia
 - curl
@@ -160,7 +161,7 @@ docker-compose logs -f
 ```bash
 # Check what's using ports
 lsof -i :3000  # Backend
-lsof -i :5173  # Frontend
+lsof -i :3005  # Frontend
 lsof -i :5432  # PostgreSQL
 lsof -i :6379  # Redis
 
@@ -201,11 +202,13 @@ npm install
 ## 📚 Next Steps
 
 1. **Read Documentation**
+
    - [README.md](./README.md) - System overview
    - [DEPLOYMENT.md](./DEPLOYMENT.md) - Production deployment
    - API documentation at `/api-docs` (when backend runs)
 
 2. **Explore Features**
+
    - Multi-factor authentication setup
    - Permission-based access control
    - Audit log tracking
@@ -244,4 +247,3 @@ npm install
 ---
 
 **Ready to build! This is a production-grade system. Treat it with the security and rigor it deserves. 🚀**
-

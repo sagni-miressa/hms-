@@ -356,6 +356,21 @@ export const login = async (
     throw new AccountInactiveError();
   }
 
+  // Check if user is OAuth-only (no password)
+  if (!user.passwordHash) {
+    logAudit({
+      userId: user.id,
+      action: 'LOGIN_FAILED',
+      details: { reason: 'OAuth-only account - password login not available' },
+      ipAddress,
+      userAgent,
+      success: false,
+    });
+    throw new InvalidCredentialsError(
+      'This account uses OAuth login. Please sign in with your OAuth provider.'
+    );
+  }
+
   // Check email verification
   if (!user.isVerified) {
     logAudit({
@@ -609,4 +624,145 @@ export const register = async (
     });
 
   return { userId: user.id };
+};
+
+/**
+ * Request password reset (forgot password)
+ */
+export const requestPasswordReset = async (email: string): Promise<void> => {
+  const user = await prisma.user.findUnique({
+    where: { email: email.toLowerCase() },
+    include: { profile: true },
+  });
+
+  // Don't reveal if user exists - always return success
+  if (!user) {
+    logger.info('Password reset requested for non-existent email', {
+      email: email.toLowerCase(),
+    });
+    return;
+  }
+
+  // Generate secure reset token
+  const resetToken = nanoid(64);
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  // Delete old reset token if exists
+  await prisma.passwordResetToken.deleteMany({
+    where: { userId: user.id },
+  });
+
+  // Create new reset token
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      token: resetToken,
+      email: user.email,
+      expiresAt,
+    },
+  });
+
+  // Generate reset link
+  const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3005';
+  const resetLink = `${baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(user.email)}`;
+
+  // Send password reset email
+  const { sendPasswordResetEmail } = await import('./email.service.js');
+  try {
+    await sendPasswordResetEmail(user.email, user.profile?.fullName || user.email, resetLink);
+  } catch (error) {
+    logger.error('Failed to send password reset email', {
+      error,
+      userId: user.id,
+      email: user.email,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+    });
+
+    // If it's a configuration error, throw it
+    if (error instanceof Error && error.message.includes('SMTP transporter not configured')) {
+      throw error;
+    }
+  }
+
+  logAudit({
+    userId: user.id,
+    action: 'PASSWORD_RESET_REQUESTED',
+    ipAddress: undefined,
+    userAgent: undefined,
+    success: true,
+  });
+};
+
+/**
+ * Reset password with token
+ */
+export const resetPassword = async (
+  token: string,
+  email: string,
+  newPassword: string
+): Promise<void> => {
+  // Validate password strength
+  const passwordErrors = validatePasswordStrength(newPassword);
+  if (passwordErrors.length > 0) {
+    throw new Error(passwordErrors.join(', '));
+  }
+
+  // Find reset token
+  const resetToken = await prisma.passwordResetToken.findFirst({
+    where: {
+      token,
+      email: email.toLowerCase(),
+    },
+    include: { user: true },
+  });
+
+  if (!resetToken) {
+    throw new Error('Invalid or expired reset token');
+  }
+
+  if (resetToken.usedAt) {
+    throw new Error('Reset token has already been used');
+  }
+
+  if (resetToken.expiresAt < new Date()) {
+    throw new Error('Reset token has expired');
+  }
+
+  // Hash new password
+  const passwordHash = await hashPassword(newPassword);
+
+  // Update password and mark token as used
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: resetToken.userId },
+      data: {
+        passwordHash,
+        passwordChangedAt: new Date(),
+      },
+    }),
+    prisma.passwordResetToken.update({
+      where: { id: resetToken.id },
+      data: { usedAt: new Date() },
+    }),
+  ]);
+
+  // Revoke all refresh tokens for security
+  await prisma.refreshToken.updateMany({
+    where: { userId: resetToken.userId },
+    data: { revokedAt: new Date() },
+  });
+
+  logAudit({
+    userId: resetToken.userId,
+    action: 'PASSWORD_CHANGED',
+    details: { method: 'password_reset' },
+    success: true,
+  });
+
+  logSecurity({
+    userId: resetToken.userId,
+    event: 'PASSWORD_RESET_COMPLETED',
+    severity: 'medium',
+  });
 };

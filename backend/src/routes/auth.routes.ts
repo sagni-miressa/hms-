@@ -7,6 +7,7 @@ import express from 'express';
 import { z } from 'zod';
 import { prisma } from '@/config/database.js';
 import * as authService from '@/services/auth.service.js';
+import * as oauthService from '@/services/oauth.service.js';
 import { createAuditLog } from '@/services/audit.service.js';
 import { authenticate, requireAuth } from '@/middleware/authentication.js';
 import { validate, emailSchema, passwordSchema } from '@/middleware/validation.js';
@@ -46,6 +47,16 @@ const setupMFASchema = z.object({
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
+  newPassword: passwordSchema,
+});
+
+const forgotPasswordSchema = z.object({
+  email: emailSchema,
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  email: emailSchema,
   newPassword: passwordSchema,
 });
 
@@ -324,7 +335,7 @@ router.post(
     // Verify current password
     const isCurrentPasswordValid = await authService.verifyPassword(
       currentPassword,
-      user.passwordHash
+      user.passwordHash || ''
     );
 
     if (!isCurrentPasswordValid) {
@@ -555,6 +566,155 @@ router.post(
     };
 
     return res.json(response);
+  })
+);
+
+/**
+ * POST /auth/password/forgot
+ * Request password reset
+ */
+router.post(
+  '/password/forgot',
+  authRateLimit,
+  validate({ body: forgotPasswordSchema }),
+  asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    await authService.requestPasswordReset(email);
+
+    // Always return success to prevent email enumeration
+    const response: ApiResponse = {
+      data: {
+        message:
+          'If an account exists with this email, password reset instructions have been sent.',
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        requestId: (req as AuthenticatedRequest).requestId,
+      },
+    };
+
+    return res.json(response);
+  })
+);
+
+/**
+ * POST /auth/password/reset
+ * Reset password with token
+ */
+router.post(
+  '/password/reset',
+  authRateLimit,
+  validate({ body: resetPasswordSchema }),
+  asyncHandler(async (req, res) => {
+    const { token, email, newPassword } = req.body;
+
+    try {
+      await authService.resetPassword(token, email, newPassword);
+    } catch (error: any) {
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_TOKEN',
+          message: error.message || 'Invalid or expired reset token',
+        },
+      });
+    }
+
+    await createAuditLog(undefined, {
+      action: 'PASSWORD_CHANGED',
+      details: { method: 'password_reset', email: email.toLowerCase() },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    const response: ApiResponse = {
+      data: {
+        message: 'Password reset successfully. Please log in with your new password.',
+      },
+      meta: {
+        timestamp: new Date().toISOString(),
+        requestId: (req as AuthenticatedRequest).requestId,
+      },
+    };
+
+    return res.json(response);
+  })
+);
+
+/**
+ * GET /auth/google
+ * Redirect to Google OAuth
+ */
+router.get(
+  '/google',
+  asyncHandler(async (_req, res) => {
+    try {
+      const authUrl = oauthService.getGoogleAuthUrl();
+      return res.redirect(authUrl);
+    } catch (error) {
+      logger.error('Failed to generate Google OAuth URL', { error });
+      return res.status(500).json({
+        error: {
+          code: 'OAUTH_ERROR',
+          message: 'Failed to initialize Google OAuth',
+        },
+      });
+    }
+  })
+);
+
+/**
+ * GET /auth/google/callback
+ * Handle Google OAuth callback
+ */
+router.get(
+  '/google/callback',
+  asyncHandler(async (req, res) => {
+    const { code, error } = req.query;
+
+    // Handle OAuth errors
+    if (error) {
+      logger.error('Google OAuth error', { error });
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3005';
+      return res.redirect(
+        `${frontendUrl}/login?error=oauth_failed&message=${encodeURIComponent('Google authentication failed')}`
+      );
+    }
+
+    if (!code || typeof code !== 'string') {
+      logger.error('Missing authorization code in Google OAuth callback');
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3005';
+      return res.redirect(
+        `${frontendUrl}/login?error=oauth_failed&message=${encodeURIComponent('Invalid authorization code')}`
+      );
+    }
+
+    try {
+      const result = await oauthService.handleGoogleCallback(
+        code,
+        req.ip,
+        req.headers['user-agent']
+      );
+
+      // Redirect to frontend with tokens
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3005';
+      const redirectUrl = new URL('/oauth-success', frontendUrl);
+      redirectUrl.searchParams.set('accessToken', result.accessToken);
+      redirectUrl.searchParams.set('refreshToken', result.refreshToken);
+
+      res.redirect(redirectUrl.toString());
+    } catch (error: any) {
+      logger.error('Google OAuth callback failed', {
+        error,
+        errorMessage: error?.message,
+      });
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3005';
+      const errorMessage = error?.message || 'Authentication failed. Please try again.';
+      return res.redirect(
+        `${frontendUrl}/login?error=oauth_failed&message=${encodeURIComponent(errorMessage)}`
+      );
+    }
   })
 );
 

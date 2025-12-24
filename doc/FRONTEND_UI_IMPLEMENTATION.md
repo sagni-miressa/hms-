@@ -420,7 +420,7 @@ npm run dev
 
 ### 3. Access the Application
 
-- Frontend: http://localhost:5173
+- Frontend: http://localhost:3005
 - Backend API: http://localhost:5000/api/v1
 
 ### 4. Test Features

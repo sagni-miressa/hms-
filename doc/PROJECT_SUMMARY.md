@@ -11,6 +11,7 @@ Built by a 10+ year Senior Full-Stack Developer following enterprise security st
 ### ✅ Backend API (Node.js + TypeScript + Express)
 
 **Core Features**:
+
 - 🔐 **JWT Authentication** with access/refresh tokens (RS256)
 - 🛡️ **5-Layer Authorization**: RBAC, MAC, DAC, ABAC, RuBAC
 - 📝 **Comprehensive Audit Logging** (immutable, non-repudiable)
@@ -23,11 +24,13 @@ Built by a 10+ year Senior Full-Stack Developer following enterprise security st
 - 💾 **Prisma ORM** with PostgreSQL
 
 **API Routes**:
+
 - `/api/v1/auth` - Login, register, MFA, token refresh
 - `/api/v1/jobs` - CRUD with clearance-based filtering
 - `/api/v1/applications` - Apply, track, status changes, feedback, offers
 
 **Security Middleware Pipeline**:
+
 1. Helmet (security headers)
 2. CORS (whitelist-based)
 3. Body parsers with size limits
@@ -43,6 +46,7 @@ Built by a 10+ year Senior Full-Stack Developer following enterprise security st
 ### ✅ Database (PostgreSQL + Prisma)
 
 **Complete Schema** with:
+
 - **Users** with roles, clearance levels, MFA, account lockout
 - **Applicant Profiles** (personal info, documents, skills)
 - **Jobs** with department scoping, salary (confidential), status
@@ -59,6 +63,7 @@ Built by a 10+ year Senior Full-Stack Developer following enterprise security st
 ### ✅ Frontend (React + TypeScript + Vite)
 
 **Architecture**:
+
 - Feature-sliced design
 - TanStack Query for server state
 - Zustand for auth state (persisted)
@@ -66,6 +71,7 @@ Built by a 10+ year Senior Full-Stack Developer following enterprise security st
 - Tailwind CSS with custom design system
 
 **Pages**:
+
 - Public home page
 - Job listings (with clearance-based filtering)
 - Login / Register with form validation
@@ -74,6 +80,7 @@ Built by a 10+ year Senior Full-Stack Developer following enterprise security st
 - 404 error page
 
 **Features**:
+
 - Automatic token refresh
 - Protected routes
 - Role-based rendering
@@ -84,6 +91,7 @@ Built by a 10+ year Senior Full-Stack Developer following enterprise security st
 ### ✅ DevOps & Deployment
 
 **Docker**:
+
 - Multi-stage Dockerfiles (backend + frontend)
 - docker-compose.yml for local development
 - docker-compose.prod.yml for production
@@ -92,12 +100,14 @@ Built by a 10+ year Senior Full-Stack Developer following enterprise security st
 - Volume persistence
 
 **Services**:
+
 - PostgreSQL 15 (primary + read replica)
 - Redis 7 (cache + rate limiting)
 - MinIO (S3-compatible object storage)
 - Nginx (reverse proxy + static serving)
 
 **Configuration**:
+
 - Environment templates (.env.example)
 - Production configs (.env.production.example)
 - Nginx with security headers
@@ -154,6 +164,7 @@ ATS/
 ## 🔐 Security Highlights
 
 ### Authentication
+
 - ✅ JWT with RS256 algorithm
 - ✅ Access tokens (15 min) + Refresh tokens (7 days)
 - ✅ Token rotation on refresh
@@ -164,6 +175,7 @@ ATS/
 - ✅ Account lockout (5 failures → 30 min lock)
 
 ### Authorization (5 Layers)
+
 1. **RBAC**: 6 roles with permission matrix
 2. **MAC**: 4 clearance levels (PUBLIC → RESTRICTED)
 3. **DAC**: Resource-specific ACLs with expiration
@@ -171,6 +183,7 @@ ATS/
 5. **RuBAC**: Working hours, IP whitelist, contextual rules
 
 ### Audit & Compliance
+
 - ✅ Immutable audit logs (never deleted)
 - ✅ Before/after change tracking
 - ✅ User, IP, device, timestamp for every action
@@ -178,6 +191,7 @@ ATS/
 - ✅ Export capability for compliance
 
 ### Attack Prevention
+
 - ✅ SQL Injection → Prisma parameterized queries
 - ✅ XSS → React escaping + CSP headers
 - ✅ CSRF → Token-based auth (no cookies for auth)
@@ -191,13 +205,13 @@ ATS/
 
 ## 📊 Test Data (After Seeding)
 
-| Email | Password | Role | Clearance |
-|-------|----------|------|-----------|
-| admin@hiring-system.com | Admin@123456 | SYSTEM_ADMIN | RESTRICTED |
-| hr@hiring-system.com | HRManager@123 | HR_MANAGER | CONFIDENTIAL |
-| recruiter@hiring-system.com | Recruiter@123 | RECRUITER | INTERNAL |
-| interviewer@hiring-system.com | Interviewer@123 | INTERVIEWER | INTERNAL |
-| applicant@example.com | Applicant@123 | APPLICANT | PUBLIC |
+| Email                         | Password        | Role         | Clearance    |
+| ----------------------------- | --------------- | ------------ | ------------ |
+| admin@hiring-system.com       | Admin@123456    | SYSTEM_ADMIN | RESTRICTED   |
+| hr@hiring-system.com          | HRManager@123   | HR_MANAGER   | CONFIDENTIAL |
+| recruiter@hiring-system.com   | Recruiter@123   | RECRUITER    | INTERNAL     |
+| interviewer@hiring-system.com | Interviewer@123 | INTERVIEWER  | INTERNAL     |
+| applicant@example.com         | Applicant@123   | APPLICANT    | PUBLIC       |
 
 ---
 
@@ -232,7 +246,7 @@ npm run dev
 ```
 
 - **Backend**: http://localhost:3000
-- **Frontend**: http://localhost:5173
+- **Frontend**: http://localhost:3005
 
 ### 5. Login & Test
 
@@ -252,30 +266,35 @@ Use any test credentials above to explore the system.
 ## 🎓 Key Learnings & Best Practices Implemented
 
 ### 1. **Security First**
+
 - Zero-trust architecture from day one
 - Multiple authorization layers (defense in depth)
 - Audit everything (compliance & forensics)
 - Never trust client input (double validation)
 
 ### 2. **Scalability**
+
 - Redis caching with smart invalidation
 - Read replicas for database
 - Stateless API (horizontal scaling ready)
 - Connection pooling & resource limits
 
 ### 3. **Maintainability**
+
 - TypeScript strict mode (catch errors early)
 - Monorepo structure (shared tooling)
 - Clear separation of concerns
 - Comprehensive logging & monitoring hooks
 
 ### 4. **Developer Experience**
+
 - Seed data for instant testing
 - Hot reload (backend + frontend)
 - Prisma Studio for DB inspection
 - Detailed error messages in dev mode
 
 ### 5. **Production Readiness**
+
 - Health checks for all services
 - Graceful shutdown (no dropped requests)
 - Non-root Docker containers
@@ -298,17 +317,20 @@ Use any test credentials above to explore the system.
 ## 🧪 Testing Strategy
 
 ### Backend
+
 - **Unit Tests**: Services, utilities (95% coverage target)
 - **Integration Tests**: Full request → DB → response
 - **Contract Tests**: OpenAPI validation
 - **Security Tests**: OWASP ZAP scans
 
 ### Frontend
+
 - **Unit Tests**: Components, hooks
 - **E2E Tests**: Playwright with role-based flows
 - **Visual Regression**: Screenshot comparisons
 
 ### Manual
+
 - Test with each role
 - Verify authorization boundaries
 - Check audit log entries
@@ -319,6 +341,7 @@ Use any test credentials above to explore the system.
 ## 🔮 Future Enhancements
 
 **Phase 2** (Post-MVP):
+
 - [ ] Email notifications (offer, status changes)
 - [ ] Document parsing (resume extraction)
 - [ ] Interview scheduling (calendar integration)
@@ -331,6 +354,7 @@ Use any test credentials above to explore the system.
 - [ ] Webhook system (external integrations)
 
 **Infrastructure**:
+
 - [ ] Kubernetes deployment manifests
 - [ ] CI/CD pipelines (GitHub Actions)
 - [ ] Blue-green deployment scripts
@@ -344,18 +368,23 @@ Use any test credentials above to explore the system.
 ## 🏆 What Makes This System Special
 
 ### 1. **Military-Grade Security**
+
 Not just authentication—5 layers of authorization with real-world security patterns used in defense and financial systems.
 
 ### 2. **Enterprise-Ready**
+
 Built for scale: Redis caching, read replicas, horizontal scaling, comprehensive audit logs.
 
 ### 3. **Developer-Friendly**
+
 Seed data, hot reload, type safety, clear error messages. Onboard new devs in minutes.
 
 ### 4. **Production-Tested Patterns**
+
 Every pattern is battle-tested: JWT refresh flows, permission caching invalidation, graceful shutdown.
 
 ### 5. **Comprehensive Documentation**
+
 4 detailed guides (README, SETUP, DEPLOYMENT, SECURITY) + inline code comments.
 
 ---
@@ -363,6 +392,7 @@ Every pattern is battle-tested: JWT refresh flows, permission caching invalidati
 ## 💡 Lessons for Future Projects
 
 ### Do's ✅
+
 - ✅ Design auth/authz **before** writing code
 - ✅ Use TypeScript strict mode (catch bugs early)
 - ✅ Log everything (with request IDs for correlation)
@@ -371,6 +401,7 @@ Every pattern is battle-tested: JWT refresh flows, permission caching invalidati
 - ✅ Use docker-compose for local dev (consistency)
 
 ### Don'ts ❌
+
 - ❌ Don't skip validation (always validate server-side)
 - ❌ Don't log passwords/tokens (even in dev)
 - ❌ Don't use weak secrets (generate strong ones)
@@ -399,19 +430,21 @@ Every pattern is battle-tested: JWT refresh flows, permission caching invalidati
 
 **Role**: Senior Full-Stack Developer (10+ years)  
 **Expertise**:
+
 - Secure system design (OWASP, NIST, zero-trust)
 - High-performance Node.js backends
 - Modern React ecosystems
 - Database optimization & complex access control
 - Production observability & CI/CD
 
-**Philosophy**: *"Security is not a feature to add later. It's the foundation you build on."*
+**Philosophy**: _"Security is not a feature to add later. It's the foundation you build on."_
 
 ---
 
 ## 📞 Support & Maintenance
 
 ### Monitoring Checklist
+
 - [ ] Health endpoints responding
 - [ ] Audit logs being written
 - [ ] Redis cache hit rate > 95%
@@ -420,12 +453,14 @@ Every pattern is battle-tested: JWT refresh flows, permission caching invalidati
 - [ ] Failed login attempts monitored
 
 ### Weekly Tasks
+
 - [ ] Review security logs
 - [ ] Check npm audit for vulnerabilities
 - [ ] Backup verification
 - [ ] Performance metrics review
 
 ### Monthly Tasks
+
 - [ ] Dependency updates
 - [ ] Security audit
 - [ ] Penetration testing
@@ -445,8 +480,7 @@ The code speaks for itself. The architecture is solid. The security is paramount
 
 ---
 
-*"This system protects people's careers and company reputation. Build it with paranoia, test it with malice, and maintain it with discipline."*
+_"This system protects people's careers and company reputation. Build it with paranoia, test it with malice, and maintain it with discipline."_
 
 — Senior Full-Stack Developer  
 December 18, 2025
-

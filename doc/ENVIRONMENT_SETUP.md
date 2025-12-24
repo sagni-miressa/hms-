@@ -15,6 +15,7 @@ backend/.env
 ## 1. 📧 SMTP Configuration (Email Sending)
 
 ### Purpose
+
 Used for sending email verification links and security alerts.
 
 ### Required Variables
@@ -29,7 +30,7 @@ SMTP_PASS=your-app-password
 SMTP_FROM=noreply@yourdomain.com
 
 # Frontend URL (for email links)
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:3005
 ```
 
 ### Step-by-Step Setup
@@ -37,10 +38,12 @@ FRONTEND_URL=http://localhost:5173
 #### Option A: Gmail (Recommended for Development)
 
 1. **Enable 2-Step Verification** on your Google account:
+
    - Go to [Google Account Security](https://myaccount.google.com/security)
    - Enable "2-Step Verification"
 
 2. **Generate App Password**:
+
    - Go to [App Passwords](https://myaccount.google.com/apppasswords)
    - Select "Mail" and "Other (Custom name)"
    - Enter "ATS System" as the name
@@ -59,6 +62,7 @@ FRONTEND_URL=http://localhost:5173
 #### Option B: Other Email Providers
 
 **Outlook/Office 365:**
+
 ```env
 SMTP_HOST=smtp.office365.com
 SMTP_PORT=587
@@ -68,6 +72,7 @@ SMTP_PASS=your-password
 ```
 
 **SendGrid:**
+
 ```env
 SMTP_HOST=smtp.sendgrid.net
 SMTP_PORT=587
@@ -77,6 +82,7 @@ SMTP_PASS=your-sendgrid-api-key
 ```
 
 **Mailgun:**
+
 ```env
 SMTP_HOST=smtp.mailgun.org
 SMTP_PORT=587
@@ -88,6 +94,7 @@ SMTP_PASS=your-mailgun-password
 #### Option C: Development Mode (No SMTP)
 
 If you don't configure SMTP in development, the system will:
+
 - Use Ethereal Email (test emails)
 - Log emails to console
 - Still work for testing
@@ -99,6 +106,7 @@ If you don't configure SMTP in development, the system will:
 ## 2. 🤖 reCAPTCHA Configuration
 
 ### Purpose
+
 Prevents bot registrations and spam.
 
 ### Required Variables
@@ -111,9 +119,11 @@ RECAPTCHA_MIN_SCORE=0.5  # Optional, default is 0.5 (for v3)
 ### Step-by-Step Setup
 
 1. **Go to Google reCAPTCHA Admin Console**:
+
    - Visit: https://www.google.com/recaptcha/admin/create
 
 2. **Create a New Site**:
+
    - **Label**: "ATS System" (or any name)
    - **reCAPTCHA type**: Choose v2 ("I'm not a robot" checkbox) or v3 (invisible)
    - **Domains**: Add your domains:
@@ -122,11 +132,13 @@ RECAPTCHA_MIN_SCORE=0.5  # Optional, default is 0.5 (for v3)
      - `*.yourdomain.com` (for subdomains)
 
 3. **Get Your Keys**:
+
    - After creating, you'll get:
      - **Site Key** (public) - Use this in your frontend
      - **Secret Key** (private) - Use this in backend `.env`
 
 4. **Configure in `.env`**:
+
    ```env
    RECAPTCHA_SECRET_KEY=6LcAbCdEfGhIjKlMnOpQrStUvWxYz1234567890
    RECAPTCHA_MIN_SCORE=0.5  # Only for v3, ignore for v2
@@ -141,6 +153,7 @@ RECAPTCHA_MIN_SCORE=0.5  # Optional, default is 0.5 (for v3)
 ### Development Mode
 
 If `RECAPTCHA_SECRET_KEY` is not set:
+
 - **Development**: Verification is skipped (returns `true`)
 - **Production**: Registration will fail
 
@@ -149,6 +162,7 @@ If `RECAPTCHA_SECRET_KEY` is not set:
 ## 3. 🔐 Log Encryption Key
 
 ### Purpose
+
 Encrypts sensitive data in audit logs (passwords, tokens, PII).
 
 ### Required Variables
@@ -164,6 +178,7 @@ ENCRYPTION_KEY=your-32-byte-encryption-key-here
 #### Generate a Strong Encryption Key
 
 **Option 1: Using OpenSSL (Recommended)**
+
 ```bash
 # Generate 32-byte (256-bit) key
 openssl rand -base64 32
@@ -173,16 +188,19 @@ openssl rand -base64 32
 ```
 
 **Option 2: Using Node.js**
+
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
 **Option 3: Using PowerShell (Windows)**
+
 ```powershell
 [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
 ```
 
 **Option 4: Online Generator**
+
 - Visit: https://generate-secret.vercel.app/32
 - Copy the generated key
 
@@ -193,6 +211,7 @@ LOG_ENCRYPTION_KEY=K8j3mN9pQ2rT5vW8yZ1bC4eF7hJ0kL3nP6sU9vX2zA5=
 ```
 
 **Important Notes:**
+
 - ⚠️ **Never commit this key to version control**
 - 🔒 Store it securely (use a password manager)
 - 🔄 Use different keys for development and production
@@ -204,6 +223,7 @@ LOG_ENCRYPTION_KEY=K8j3mN9pQ2rT5vW8yZ1bC4eF7hJ0kL3nP6sU9vX2zA5=
 ## 4. 🚨 Alert Email Configuration
 
 ### Purpose
+
 Email addresses that receive security alerts.
 
 ### Required Variables
@@ -216,10 +236,12 @@ ALERT_EMAIL_SECURITY=security@example.com
 ### Step-by-Step Setup
 
 1. **Identify Recipients**:
+
    - **Admins**: System administrators who need alerts
    - **Security Team**: Security team email addresses
 
 2. **Configure in `.env`**:
+
    ```env
    ALERT_EMAIL_ADMINS=admin@yourdomain.com,manager@yourdomain.com
    ALERT_EMAIL_SECURITY=security@yourdomain.com,alerts@yourdomain.com
@@ -256,7 +278,7 @@ SMTP_SECURE=false
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
 SMTP_FROM=noreply@yourdomain.com
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:3005
 
 # ============================================================================
 # reCAPTCHA
@@ -299,6 +321,7 @@ npm run dev
 ```
 
 Try registering a new user. Check:
+
 - Email is sent (or logged to console in dev mode)
 - No SMTP errors in logs
 
@@ -317,6 +340,7 @@ Try registering a new user. Check:
 ### 4. Test Alerts
 
 Trigger a security event (e.g., multiple failed logins):
+
 - Check email inbox for alert
 - Check logs for alert creation
 
@@ -325,22 +349,26 @@ Trigger a security event (e.g., multiple failed logins):
 ## 🔒 Security Best Practices
 
 1. **Never commit `.env` to Git**:
+
    ```bash
    # Ensure .env is in .gitignore
    echo ".env" >> .gitignore
    ```
 
 2. **Use different keys for each environment**:
+
    - Development: Test keys
    - Staging: Staging keys
    - Production: Production keys
 
 3. **Rotate keys periodically**:
+
    - Encryption keys: Every 6-12 months
    - JWT secrets: If compromised
    - SMTP passwords: As needed
 
 4. **Store production keys securely**:
+
    - Use secret management services (AWS Secrets Manager, HashiCorp Vault)
    - Use environment variables in deployment platforms
    - Never hardcode in code
@@ -356,11 +384,13 @@ Trigger a security event (e.g., multiple failed logins):
 ### SMTP Issues
 
 **Error: "Invalid login"**
+
 - Check username and password
 - For Gmail: Use App Password, not regular password
 - Verify 2FA is enabled (for Gmail)
 
 **Error: "Connection timeout"**
+
 - Check firewall settings
 - Verify SMTP port (587 for TLS, 465 for SSL)
 - Try different SMTP server
@@ -368,6 +398,7 @@ Trigger a security event (e.g., multiple failed logins):
 ### reCAPTCHA Issues
 
 **Error: "Invalid site key"**
+
 - Verify secret key matches site key
 - Check domain is registered in reCAPTCHA console
 - Ensure using correct key type (v2 vs v3)
@@ -375,6 +406,7 @@ Trigger a security event (e.g., multiple failed logins):
 ### Encryption Issues
 
 **Error: "Encryption key not configured"**
+
 - Check `LOG_ENCRYPTION_KEY` or `ENCRYPTION_KEY` is set
 - Verify key is at least 32 bytes
 - Check for typos in variable name
@@ -405,4 +437,3 @@ Trigger a security event (e.g., multiple failed logins):
 ---
 
 **Need Help?** Check the logs in `backend/logs/` for detailed error messages.
-

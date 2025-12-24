@@ -163,7 +163,7 @@ SMTP_SECURE=false
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
 SMTP_FROM=noreply@hiring-system.com
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:3005
 
 # reCAPTCHA (for bot prevention)
 RECAPTCHA_SECRET_KEY=your-recaptcha-secret-key

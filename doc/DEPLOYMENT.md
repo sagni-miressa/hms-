@@ -62,7 +62,7 @@ npm run dev -w frontend
 ```
 
 - Backend: http://localhost:3000
-- Frontend: http://localhost:5173
+- Frontend: http://localhost:3005
 - API Docs: http://localhost:3000/api/v1
 
 ## Production Deployment
@@ -298,6 +298,7 @@ docker cp hiring_redis:/data/dump.rdb ./redis_backup_$(date +%Y%m%d).rdb
 ## Support
 
 For issues, consult:
+
 - README.md - Project overview
 - Architecture diagrams
 - Prisma schema documentation
@@ -306,4 +307,3 @@ For issues, consult:
 ---
 
 **Remember: Security is paramount. This system handles sensitive hiring data. Follow all security guidelines.**
-

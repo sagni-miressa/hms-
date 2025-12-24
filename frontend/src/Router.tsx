@@ -17,6 +17,10 @@ import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { HomePage } from "@/pages/Home";
 import { LoginPage } from "@/pages/Login";
 import { RegisterPage } from "@/pages/Register";
+import { VerifyEmailPage } from "@/pages/VerifyEmail";
+import { ForgotPasswordPage } from "@/pages/ForgotPassword";
+import { ResetPasswordPage } from "@/pages/ResetPassword";
+import { OAuthSuccessPage } from "@/pages/OAuthSuccess";
 import { JobsPage } from "@/pages/Jobs";
 import { JobDetailPage } from "@/pages/JobDetail";
 import { DashboardPage } from "@/pages/Dashboard";
@@ -71,6 +75,38 @@ export const Router = () => {
             element={
               <GuestRoute>
                 <RegisterPage />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/verify-email"
+            element={
+              <GuestRoute>
+                <VerifyEmailPage />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <GuestRoute>
+                <ForgotPasswordPage />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <GuestRoute>
+                <ResetPasswordPage />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/oauth-success"
+            element={
+              <GuestRoute>
+                <OAuthSuccessPage />
               </GuestRoute>
             }
           />

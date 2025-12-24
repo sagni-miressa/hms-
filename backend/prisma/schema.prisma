@@ -9,43 +9,49 @@ datasource db {
 }
 
 model User {
-  id                String            @id @default(cuid())
-  email             String            @unique
-  username          String?           @unique
-  passwordHash      String
-  roles             Role[]            @default([APPLICANT])
-  clearanceLevel    ClearanceLevel    @default(PUBLIC)
-  department        String?
-  employmentStatus  String?
-  isActive          Boolean           @default(true)
-  isVerified        Boolean           @default(false)
-  mfaEnabled        Boolean           @default(false)
-  mfaSecret         String?
-  lastLoginAt       DateTime?
-  lastActivityAt    DateTime?
-  failedLoginCount  Int               @default(0)
-  lockedUntil       DateTime?
-  passwordChangedAt DateTime?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  deletedAt         DateTime?
-  grantedACLs       ACL[]             @relation("GrantedBy")
-  receivedACLs      ACL[]             @relation("GrantedTo")
-  profile           ApplicantProfile?
-  applications      Application[]
-  auditLogs         AuditLog[]
-  interviewPanels   InterviewPanel[]
-  sentInvitations   Invitation[]      @relation("SentInvitations")
-  ownedJobs         Job[]             @relation("JobOwner")
-  refreshTokens     RefreshToken[]
-  emailVerification EmailVerificationToken? @relation("EmailVerifications")
+  id                 String                  @id @default(cuid())
+  email              String                  @unique
+  username           String?                 @unique
+  passwordHash       String?
+  provider           String? // 'local', 'google', 'linkedin', etc.
+  providerId         String? // OAuth provider's user ID
+  providerData       Json? // Additional OAuth provider data
+  roles              Role[]                  @default([APPLICANT])
+  clearanceLevel     ClearanceLevel          @default(PUBLIC)
+  department         String?
+  employmentStatus   String?
+  isActive           Boolean                 @default(true)
+  isVerified         Boolean                 @default(false)
+  mfaEnabled         Boolean                 @default(false)
+  mfaSecret          String?
+  lastLoginAt        DateTime?
+  lastActivityAt     DateTime?
+  failedLoginCount   Int                     @default(0)
+  lockedUntil        DateTime?
+  passwordChangedAt  DateTime?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  deletedAt          DateTime?
+  grantedACLs        ACL[]                   @relation("GrantedBy")
+  receivedACLs       ACL[]                   @relation("GrantedTo")
+  profile            ApplicantProfile?
+  applications       Application[]
+  auditLogs          AuditLog[]
+  interviewPanels    InterviewPanel[]
+  sentInvitations    Invitation[]            @relation("SentInvitations")
+  ownedJobs          Job[]                   @relation("JobOwner")
+  refreshTokens      RefreshToken[]
+  emailVerification  EmailVerificationToken? @relation("EmailVerifications")
+  passwordResetToken PasswordResetToken?     @relation("PasswordResets")
 
+  @@unique([provider, providerId], name: "provider_providerId")
   @@index([email])
   @@index([roles])
   @@index([department])
   @@index([clearanceLevel])
   @@index([isActive])
   @@index([createdAt])
+  @@index([provider, providerId])
   @@map("users")
 }
 
@@ -249,19 +255,35 @@ model RefreshToken {
 }
 
 model EmailVerificationToken {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  token     String   @unique
-  email     String
-  expiresAt DateTime
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  token      String    @unique
+  email      String
+  expiresAt  DateTime
   verifiedAt DateTime?
-  createdAt DateTime @default(now())
-  user      User     @relation("EmailVerifications", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  user       User      @relation("EmailVerifications", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([token])
   @@index([email])
   @@index([expiresAt])
   @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  token     String    @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation("PasswordResets", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([email])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 enum Role {
