@@ -51,10 +51,13 @@ export const loginWithBiometric = async (
   const response = await api.post<ApiResponse<any>>("/webauthn/login/start", {
     email,
   });
+
+  console.log("Authentication options received:", response);
   const options = extractData(response);
 
   // 2. Start browser authentication
   const assertion = await startAuthentication(options);
+  console.log("Assertion received from browser:", assertion);
 
   // 3. Send assertion back to server to finish login
   const finishResponse = await api.post<

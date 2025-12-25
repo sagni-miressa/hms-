@@ -25,15 +25,31 @@ router.post('/register/start', authenticate, requireAuth, async (req: Request, r
   const user = (req as AuthenticatedRequest).user;
   if (!user) return res.status(401).json({ error: 'Not authenticated' });
 
+  // Fetch full user details including profile
+  const fullUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    include: { profile: true },
+  });
+
+  if (!fullUser) return res.status(404).json({ error: 'User not found' });
+
+  // Get display name from profile
+  const displayName = fullUser.profile?.fullName || fullUser.username || fullUser.email;
+
   const options = await generateRegistrationOptions({
     rpName,
     rpID,
     userID: Buffer.from(user.id), // Must be Uint8Array
-    userName: user.username || user.email,
+    userName: user.email,
+    userDisplayName: displayName, // Human-readable name shown in passkey picker
     attestationType: 'none',
     authenticatorSelection: {
       userVerification: 'preferred',
-      residentKey: 'preferred',
+      residentKey: 'required', // Force passkey to be saved on device
+      requireResidentKey: true, // Backwards compatibility
+    },
+    extensions: {
+      credProps: true, // Request credential properties
     },
   });
 
@@ -122,17 +138,10 @@ router.post('/login/start', async (req: Request, res: Response) => {
 
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  // Debug logging
-  console.log('User has', user.webAuthnCredentials.length, 'credentials');
-  console.log('RP ID:', rpID);
-  console.log('Origin:', origin);
-
   const allowCredentials = user.webAuthnCredentials.map(cred => ({
     id: isoBase64URL.fromBuffer(Buffer.from(cred.credentialID)),
     transports: cred.transports as any,
   }));
-
-  console.log('allowCredentials:', allowCredentials);
 
   const options = await generateAuthenticationOptions({
     allowCredentials,
@@ -237,5 +246,98 @@ router.post('/login/finish', async (req: Request, res: Response) => {
 
   return res.status(400).json({ error: 'Authentication failed' });
 });
+
+// GET credentials - list all credentials for the authenticated user
+router.get('/credentials', authenticate, requireAuth, async (req: Request, res: Response) => {
+  const authenticatedReq = req as AuthenticatedRequest;
+  const userId = authenticatedReq.user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const credentials = await prisma.webAuthnCredential.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        deviceType: true,
+        backedUp: true,
+        transports: true,
+        nickname: true,
+        lastUsedAt: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return res.json({ data: credentials });
+  } catch (error) {
+    console.error('Failed to fetch credentials:', error);
+    return res.status(500).json({ error: 'Failed to fetch credentials' });
+  }
+});
+
+// DELETE credential
+router.delete(
+  '/credentials/:credentialId',
+  authenticate,
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const authenticatedReq = req as AuthenticatedRequest;
+    const userId = authenticatedReq.user?.id;
+    const { credentialId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+      // Verify the credential belongs to the user
+      const credential = await prisma.webAuthnCredential.findFirst({
+        where: {
+          id: credentialId,
+          userId: userId,
+        },
+      });
+
+      if (!credential) {
+        return res.status(404).json({ error: 'Credential not found' });
+      }
+
+      // Delete the credential
+      await prisma.webAuthnCredential.delete({
+        where: { id: credentialId },
+      });
+
+      // Check if user has any remaining WebAuthn credentials
+      const remainingCredentials = await prisma.webAuthnCredential.count({
+        where: { userId },
+      });
+
+      // If no more WebAuthn credentials, disable MFA
+      if (remainingCredentials === 0) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { mfaEnabled: false },
+        });
+      }
+
+      await createAuditLog(userId, {
+        action: 'MFA_DISABLED',
+        resourceType: 'User',
+        resourceId: userId,
+        details: { method: 'webauthn', credentialId },
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
+
+      return res.json({ data: { ok: true, message: 'Credential deleted' } });
+    } catch (error) {
+      console.error('Failed to delete credential:', error);
+      return res.status(500).json({ error: 'Failed to delete credential' });
+    }
+  }
+);
 
 export default router;

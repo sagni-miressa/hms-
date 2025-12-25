@@ -259,8 +259,29 @@ router.post(
 
     const result = await authService.generateMFASecret(authReq.user.email);
 
+    // Hash backup codes before storing
+    const hashedBackupCodes = await Promise.all(
+      result.backupCodes.map(code => authService.hashPassword(code))
+    );
+
     // Store secret temporarily (user must verify before enabling)
-    // In production, store this in a temporary cache with TTL
+    // Store with mfaEnabled still false - only enable after verification
+    await prisma.user.update({
+      where: { id: authReq.user.id },
+      data: {
+        mfaSecret: result.secret,
+        mfaBackupCodes: hashedBackupCodes,
+        mfaEnabled: false, // Don't enable until verified
+      },
+    });
+
+    await createAuditLog(authReq.user.id, {
+      action: 'MFA_SETUP_INITIATED',
+      resourceType: 'User',
+      resourceId: authReq.user.id,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
 
     const response: ApiResponse = {
       data: {
@@ -289,11 +310,75 @@ router.post(
   validate({ body: setupMFASchema }),
   asyncHandler(async (req, res) => {
     const authReq = req as AuthenticatedRequest;
-    const { token: _token } = req.body;
+    const { token } = req.body;
 
-    // Verify token against stored secret (from setup)
-    // This is simplified - in production, retrieve from cache
-    // TODO: Implement MFA verification using _token
+    // Get user with MFA secret
+    const user = await prisma.user.findUnique({
+      where: { id: authReq.user.id },
+      select: { mfaSecret: true, mfaEnabled: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found',
+        },
+      });
+    }
+
+    if (!user.mfaSecret) {
+      return res.status(400).json({
+        error: {
+          code: 'MFA_NOT_SETUP',
+          message: 'MFA setup not initiated. Please call /auth/mfa/setup first.',
+        },
+      });
+    }
+
+    if (user.mfaEnabled) {
+      return res.status(400).json({
+        error: {
+          code: 'MFA_ALREADY_ENABLED',
+          message: 'MFA is already enabled for this account',
+        },
+      });
+    }
+
+    // Verify the token
+    const isValid = authService.verifyMFAToken(user.mfaSecret, token);
+
+    if (!isValid) {
+      await createAuditLog(authReq.user.id, {
+        action: 'MFA_VERIFICATION_FAILED',
+        resourceType: 'User',
+        resourceId: authReq.user.id,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
+
+      return res.status(400).json({
+        error: {
+          code: 'INVALID_TOKEN',
+          message: 'Invalid MFA token. Please try again.',
+        },
+      });
+    }
+
+    // Enable MFA for the user
+    await prisma.user.update({
+      where: { id: authReq.user.id },
+      data: { mfaEnabled: true },
+    });
+
+    await createAuditLog(authReq.user.id, {
+      action: 'MFA_ENABLED',
+      resourceType: 'User',
+      resourceId: authReq.user.id,
+      details: { method: 'authenticator_app' },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
 
     const response: ApiResponse = {
       data: {
@@ -305,7 +390,7 @@ router.post(
       },
     };
 
-    res.json(response);
+    return res.json(response);
   })
 );
 

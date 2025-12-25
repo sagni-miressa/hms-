@@ -24,6 +24,7 @@ model User {
   isVerified         Boolean                 @default(false)
   mfaEnabled         Boolean                 @default(false)
   mfaSecret          String?
+  mfaBackupCodes     Json?                   // Array of hashed backup codes
   lastLoginAt        DateTime?
   lastActivityAt     DateTime?
   failedLoginCount   Int                     @default(0)
