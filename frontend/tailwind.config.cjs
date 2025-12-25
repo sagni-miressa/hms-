@@ -25,6 +25,10 @@ module.exports = {
         "surface-dark": "#2d241b",
         "text-main": "#181411",
         "text-muted": "#897561",
+        "text-secondary": "#9c7349", // Added from HTML template
+        "border-color": "#f4ede7", // Added from HTML template
+        "primary-light": "#fff0e0",
+        "primary-dark": "#c26100",
         "recruit-bg": {
           light: "#f8f7f6",
           dark: "#221910",

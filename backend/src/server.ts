@@ -7,7 +7,7 @@ import { logger } from './utils/logger.js';
 const PORT = Number(process.env.PORT) || 5000;
 const HOST = process.platform === 'win32' ? '127.0.0.1' : '0.0.0.0';
 
-const requiredEnvVars = ['DATABASE_URL', 'REDIS_URL', 'JWT_ACCESS_PRIVATE_KEY'];
+const requiredEnvVars = ['DATABASE_URL', 'REDIS_URL', 'JWT_ACCESS_PRIVATE_KEY', 'SESSION_SECRET'];
 
 const missingEnvVars = requiredEnvVars.filter(env => !process.env[env]);
 

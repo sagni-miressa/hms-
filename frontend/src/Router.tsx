@@ -25,12 +25,13 @@ import { JobsPage } from "@/pages/Jobs";
 import { JobDetailPage } from "@/pages/JobDetail";
 import { Dashboard } from "@/pages/Dashboard";
 import { ApplicationsPage } from "@/pages/Applications";
-import { SettingsPage } from "@/pages/Settings";
 import { MFASetupPage } from "@/pages/MFASetup";
-import { UsersPage } from "@/pages/Users";
-import { AuditLogsPage } from "@/pages/AuditLogs";
+import { UserManagement } from "@/pages/admin/UserManagement";
+import { AuditLogsPage } from "@/pages/admin/AuditLogs";
 import { BackupsPage } from "@/pages/Backups";
-import { PermissionsPage } from "@/pages/Permissions";
+import { PermissionsManagement } from "@/pages/admin/PermissionsManagement";
+import { AnalyticsDashboard } from "@/pages/admin/AnalyticsDashboard";
+import { AdminSettings } from "@/pages/admin/AdminSettings";
 import { NotFoundPage } from "@/pages/NotFound";
 
 // Protected Route wrapper
@@ -122,12 +123,13 @@ export const Router = () => {
         >
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/applications" element={<ApplicationsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings" element={<AdminSettings />} />
           <Route path="/settings/mfa" element={<MFASetupPage />} />
-          <Route path="/users" element={<UsersPage />} />
+          <Route path="/users" element={<UserManagement />} />
           <Route path="/audit-logs" element={<AuditLogsPage />} />
           <Route path="/backups" element={<BackupsPage />} />
-          <Route path="/permissions" element={<PermissionsPage />} />
+          <Route path="/permissions" element={<PermissionsManagement />} />
+          <Route path="/analytics" element={<AnalyticsDashboard />} />
         </Route>
 
         {/* 404 */}
