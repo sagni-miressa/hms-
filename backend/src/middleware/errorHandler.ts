@@ -19,7 +19,7 @@ export const errorHandler = (
   error: Error,
   req: Request,
   res: Response,
-  _next: NextFunction
+  next: NextFunction
 ): void => {
   const authReq = req as AuthenticatedRequest;
 
@@ -29,6 +29,11 @@ export const errorHandler = (
     userId: authReq.user?.id,
     path: req.path,
   });
+
+  // If headers already sent, delegate to default Express error handler
+  if (res.headersSent) {
+    return next(error);
+  }
 
   // Handle AppError (our custom errors)
   if (error instanceof AppError) {

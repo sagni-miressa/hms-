@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Shield, CheckCircle, AlertCircle } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Shield, CheckCircle, AlertCircle, Fingerprint } from "lucide-react";
 import toast from "react-hot-toast";
 import { setupMFA, verifyMFA } from "@/services/mfa.service";
+import { registerBiometric } from "@/services/webauthn.service";
 import { getCurrentUser } from "@/services/auth.service";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -19,6 +20,7 @@ const verifySchema = z.object({
 type VerifyForm = z.infer<typeof verifySchema>;
 
 export const MFASetupPage = () => {
+  const queryClient = useQueryClient();
   const [mfaSecret, setMfaSecret] = useState<string | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
@@ -59,6 +61,7 @@ export const MFASetupPage = () => {
     onSuccess: () => {
       setIsVerified(true);
       toast.success("MFA enabled successfully!");
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.error?.message || "Invalid MFA token");
@@ -72,6 +75,20 @@ export const MFASetupPage = () => {
   const handleSetup = () => {
     setupMutation.mutate();
   };
+
+  const biometricMutation = useMutation({
+    mutationFn: () => registerBiometric(),
+    onSuccess: () => {
+      toast.success("Biometric authentication registered!");
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+    },
+    onError: (error: any) => {
+      console.error("Biometric registration error:", error);
+      toast.error(
+        error?.response?.data?.error?.message || "Biometric registration failed"
+      );
+    },
+  });
 
   if (userData?.user.mfaEnabled && !mfaSecret) {
     return (
@@ -128,7 +145,25 @@ export const MFASetupPage = () => {
               isLoading={setupMutation.isPending}
               className="w-full"
             >
-              Start MFA Setup
+              Start Authenticator Setup
+            </Button>
+
+            <div className="relative flex py-2 items-center">
+              <div className="flex-grow border-t border-gray-200" />
+              <span className="flex-shrink-0 mx-4 text-gray-400 text-xs uppercase font-medium tracking-wider">
+                Or
+              </span>
+              <div className="flex-grow border-t border-gray-200" />
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={() => biometricMutation.mutate()}
+              isLoading={biometricMutation.isPending}
+              className="w-full gap-2"
+            >
+              <Fingerprint className="h-5 w-5" />
+              Setup Biometric Auth
             </Button>
           </div>
         </Card>

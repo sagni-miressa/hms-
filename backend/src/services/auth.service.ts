@@ -16,7 +16,6 @@ import {
   InvalidCredentialsError,
   AccountLockedError,
   AccountInactiveError,
-  MFARequiredError,
   InvalidMFACodeError,
   TokenExpiredError,
   TokenInvalidError,
@@ -419,10 +418,20 @@ export const login = async (
   // Check MFA
   if (user.mfaEnabled) {
     if (!mfaToken) {
-      throw new MFARequiredError();
+      return {
+        accessToken: '',
+        refreshToken: '',
+        requiresMFA: true,
+      };
     }
 
-    const isMFAValid = verifyMFAToken(user.mfaSecret!, mfaToken);
+    if (!user.mfaSecret) {
+      throw new InvalidMFACodeError(
+        'Authenticator app not set up. Please use biometric authentication.'
+      );
+    }
+
+    const isMFAValid = verifyMFAToken(user.mfaSecret, mfaToken);
 
     if (!isMFAValid) {
       logSecurity({
@@ -479,6 +488,35 @@ export const login = async (
     refreshToken,
     requiresMFA: false,
   };
+};
+
+/**
+ * Issue tokens for an authenticated user
+ */
+export const issueTokens = async (
+  user: any,
+  deviceId?: string,
+  ipAddress?: string,
+  userAgent?: string
+): Promise<{ accessToken: string; refreshToken: string }> => {
+  const authenticatedUser: AuthenticatedUser = {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    roles: user.roles,
+    clearanceLevel: user.clearanceLevel,
+    department: user.department,
+    isActive: user.isActive,
+    mfaEnabled: user.mfaEnabled,
+  };
+
+  const accessToken = generateAccessToken(authenticatedUser);
+  const refreshToken = await generateRefreshToken(user.id, deviceId, ipAddress, userAgent);
+
+  // Cache session
+  await sessionCache.set(`session:${user.id}`, authenticatedUser, SESSION_CACHE_TTL);
+
+  return { accessToken, refreshToken };
 };
 
 /**

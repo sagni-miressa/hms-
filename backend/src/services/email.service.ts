@@ -154,7 +154,7 @@ export const sendVerificationEmail = async (
     const template = getVerificationEmailTemplate(name, code);
 
     const mailOptions = {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@hiring-system.com',
+      from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@recruithub.com',
       to: email,
       subject: template.subject,
       html: template.html,
@@ -223,7 +223,7 @@ export const sendPasswordResetEmail = async (
     const template = getPasswordResetEmailTemplate(name, resetLink);
 
     const mailOptions = {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@hiring-system.com',
+      from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@recruithub.com',
       to: email,
       subject: template.subject,
       html: template.html,
@@ -319,7 +319,7 @@ export const sendAlertEmail = async (
     });
 
     const mailOptions = {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER || 'alerts@hiring-system.com',
+      from: process.env.SMTP_FROM || process.env.SMTP_USER || 'alerts@recruithub.com',
       to: recipients.join(', '),
       subject: `[${severity.toUpperCase()}] ${subject}`,
       html,

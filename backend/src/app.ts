@@ -18,10 +18,11 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { logger } from './utils/logger';
 
 // Route imports
-import authRoutes from './routes/auth.routes';
-import jobsRoutes from './routes/jobs.routes';
-import applicationsRoutes from './routes/applications.routes';
-import systemRoutes from './routes/system.routes';
+import authRoutes from './routes/auth.routes.js';
+import webauthnRoutes from './routes/webauthn.routes.js';
+import jobsRoutes from './routes/jobs.routes.js';
+import applicationsRoutes from './routes/applications.routes.js';
+import systemRoutes from './routes/system.routes.js';
 
 // ============================================================================
 // EXPRESS APP INITIALIZATION
@@ -181,6 +182,7 @@ app.get('/health/ready', async (_req, res) => {
 // ============================================================================
 
 app.use(`${API.PREFIX}/auth`, authRoutes);
+app.use(`${API.PREFIX}/webauthn`, webauthnRoutes);
 app.use(`${API.PREFIX}/jobs`, jobsRoutes);
 app.use(`${API.PREFIX}/applications`, applicationsRoutes);
 app.use(`${API.PREFIX}/system`, systemRoutes);

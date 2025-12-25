@@ -5,8 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { Shield, Eye, EyeOff, Check, Rocket } from "lucide-react";
+import { Shield, Eye, EyeOff, Check, Rocket, Fingerprint } from "lucide-react";
 import { login } from "@/services/auth.service";
+import { loginWithBiometric } from "@/services/webauthn.service";
 import { useAuthStore } from "@/stores/authStore";
 import { getCurrentUser } from "@/services/auth.service";
 import { LogoIcon } from "@/components/icons/LogoIcon";
@@ -31,9 +32,33 @@ export const LoginPage = () => {
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
+  });
+
+  const biometricLoginMutation = useMutation({
+    mutationFn: loginWithBiometric,
+    onSuccess: async (data) => {
+      const { setTokens } = useAuthStore.getState();
+      setTokens(data.accessToken, data.refreshToken);
+
+      try {
+        const userResponse = await getCurrentUser();
+        setAuth(userResponse.user, data.accessToken, data.refreshToken);
+        toast.success("Login successful!");
+        navigate("/dashboard");
+      } catch (error) {
+        console.error("Failed to load user profile:", error);
+        toast.error("Failed to load user profile");
+        useAuthStore.getState().logout();
+      }
+    },
+    onError: (error: any) => {
+      console.error("Biometric login error:", error);
+      toast.error(error?.response?.data?.error?.message || "Biometric login failed");
+    },
   });
 
   const loginMutation = useMutation({
@@ -202,38 +227,57 @@ export const LoginPage = () => {
 
             {/* MFA Code Input */}
             {requiresMFA && (
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-start space-x-3">
-                  <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-blue-900">
-                      MFA Required
-                    </h3>
-                    <p className="mt-1 text-sm text-blue-700">
-                      Please enter the 6-digit code from your authenticator app
-                    </p>
+              <div className="space-y-4">
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-start space-x-3">
+                    <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-blue-900">
+                        MFA Required
+                      </h3>
+                      <p className="mt-1 text-sm text-blue-700">
+                        Please enter the 6-digit code or use biometric auth
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <input
+                      {...register("mfaToken")}
+                      type="text"
+                      placeholder="000000"
+                      maxLength={6}
+                      autoComplete="off"
+                      autoFocus
+                      className={`flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-900 bg-white border h-12 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal transition-colors focus:outline-none focus:ring-1 ${
+                        errors.mfaToken
+                          ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                          : "border-gray-300 focus:border-primary-500 focus:ring-primary-500"
+                      }`}
+                    />
+                    {errors.mfaToken && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {errors.mfaToken.message}
+                      </p>
+                    )}
                   </div>
                 </div>
-                <div className="mt-4">
-                  <input
-                    {...register("mfaToken")}
-                    type="text"
-                    placeholder="000000"
-                    maxLength={6}
-                    autoComplete="off"
-                    autoFocus
-                    className={`flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-gray-900 bg-white border h-12 placeholder:text-gray-400 p-[15px] text-base font-normal leading-normal transition-colors focus:outline-none focus:ring-1 ${
-                      errors.mfaToken
-                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                        : "border-gray-300 focus:border-primary-500 focus:ring-primary-500"
-                    }`}
-                  />
-                  {errors.mfaToken && (
-                    <p className="mt-1 text-sm text-red-600">
-                      {errors.mfaToken.message}
-                    </p>
-                  )}
+
+                <div className="relative flex py-2 items-center">
+                  <div className="flex-grow border-t border-gray-200" />
+                  <span className="flex-shrink-0 mx-4 text-gray-400 text-xs uppercase font-medium tracking-wider">
+                    Or use biometric
+                  </span>
+                  <div className="flex-grow border-t border-gray-200" />
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => biometricLoginMutation.mutate(getValues("email"))}
+                  className="flex w-full items-center justify-center gap-3 h-12 rounded-lg border border-primary-500 text-primary-500 hover:bg-primary-50 transition-colors font-bold text-sm"
+                >
+                  <Fingerprint className="size-5" />
+                  <span>Use Fingerprint / Face ID</span>
+                </button>
               </div>
             )}
 
