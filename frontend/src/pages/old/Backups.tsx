@@ -1,10 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  Database,
-  HardDrive,
-  RefreshCw,
-  Trash2,
-} from "lucide-react";
+import { Database, HardDrive, RefreshCw, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { format } from "date-fns";
 import {

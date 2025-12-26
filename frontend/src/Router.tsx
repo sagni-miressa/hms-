@@ -13,26 +13,39 @@ import { PublicLayout } from "@/layouts/PublicLayout";
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 
-// Pages
-import { HomePage } from "@/pages/Home";
-import { LoginPage } from "@/pages/Login";
-import { RegisterPage } from "@/pages/Register";
-import { VerifyEmailPage } from "@/pages/VerifyEmail";
-import { ForgotPasswordPage } from "@/pages/ForgotPassword";
-import { ResetPasswordPage } from "@/pages/ResetPassword";
-import { OAuthSuccessPage } from "@/pages/OAuthSuccess";
-import { JobsPage } from "@/pages/Jobs";
-import { JobDetailPage } from "@/pages/JobDetail";
-import { Dashboard } from "@/pages/Dashboard";
-import { ApplicationsPage } from "@/pages/Applications";
-import { MFASetupPage } from "@/pages/MFASetup";
+// Pages - Import actual existing pages
+import LoginPage from "@/pages/Login";
+import Dashboard from "@/pages/Dashboard";
+import ApplicationsPage from "@/pages/Applications";
+import JobsPage from "@/pages/Jobs";
+import MFAPage from "@/pages/MFA";
+import UserManagementPage from "@/pages/UserManagement";
+import SettingsPage from "@/pages/Settings";
+import CandidatesPage from "@/pages/Candidates";
+import InterviewsPage from "@/pages/Interviews";
+import OffersPage from "@/pages/Offers";
+import OnboardingPage from "@/pages/Onboarding";
+import ReportsPage from "@/pages/Reports";
+import SecurityPage from "@/pages/Security";
+import CompliancePage from "@/pages/Compliance";
+import ApplicantPortalPage from "@/pages/ApplicantPortal";
+import NotFoundPage from "@/pages/NotFound";
+
+// Old pages for legacy routes
+import { HomePage } from "@/pages/old/Home";
+import { RegisterPage } from "@/pages/old/Register";
+import { VerifyEmailPage } from "@/pages/old/VerifyEmail";
+import { ForgotPasswordPage } from "@/pages/old/ForgotPassword";
+import { ResetPasswordPage } from "@/pages/old/ResetPassword";
+import { OAuthSuccessPage } from "@/pages/old/OAuthSuccess";
+import { JobDetailPage } from "@/pages/old/JobDetail";
+
+// Admin pages
 import { UserManagement } from "@/pages/admin/UserManagement";
-import { AuditLogsPage } from "@/pages/admin/AuditLogs";
-import { BackupsPage } from "@/pages/Backups";
+import { AuditLogsPage as AdminAuditLogs } from "@/pages/admin/AuditLogs";
 import { PermissionsManagement } from "@/pages/admin/PermissionsManagement";
 import { AnalyticsDashboard } from "@/pages/admin/AnalyticsDashboard";
 import { AdminSettings } from "@/pages/admin/AdminSettings";
-import { NotFoundPage } from "@/pages/NotFound";
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -123,11 +136,20 @@ export const Router = () => {
         >
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/applications" element={<ApplicationsPage />} />
-          <Route path="/settings" element={<AdminSettings />} />
-          <Route path="/settings/mfa" element={<MFASetupPage />} />
+          <Route path="/candidates" element={<CandidatesPage />} />
+          <Route path="/interviews" element={<InterviewsPage />} />
+          <Route path="/offers" element={<OffersPage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/security" element={<SecurityPage />} />
+          <Route path="/compliance" element={<CompliancePage />} />
+          <Route path="/portal" element={<ApplicantPortalPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings/admin" element={<AdminSettings />} />
+          <Route path="/settings/mfa" element={<MFAPage />} />
           <Route path="/users" element={<UserManagement />} />
-          <Route path="/audit-logs" element={<AuditLogsPage />} />
-          <Route path="/backups" element={<BackupsPage />} />
+          <Route path="/user-management" element={<UserManagementPage />} />
+          <Route path="/audit-logs" element={<AdminAuditLogs />} />
           <Route path="/permissions" element={<PermissionsManagement />} />
           <Route path="/analytics" element={<AnalyticsDashboard />} />
         </Route>

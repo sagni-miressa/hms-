@@ -1,281 +1,472 @@
-/**
- * Applications Page
- * View and manage job applications
- */
-
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
-import { getApplications } from "@/services/applications.service";
-import { useAuthStore } from "@/stores/authStore";
-import type { ApplicationFilters, ApplicationStatus } from "@/types";
-import { Role } from "@/types";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Badge } from "@/components/ui/Badge";
+import {
+  Search,
+  Download,
+  MoreVertical,
+  Eye,
+  MessageSquare,
+  CheckCircle,
+  XCircle,
+  Clock,
+  FileText,
+  Calendar,
+  Star,
+  Loader2,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
+import { cn } from "@/lib/utils";
+import {
+  getApplications,
+  updateApplicationStatus,
+} from "@/services/applications.service";
+import type { ApplicationStatus } from "@/types";
+import toast from "react-hot-toast";
 
-const statusLabels: Record<ApplicationStatus, string> = {
-  PENDING: "Pending",
-  REVIEWING: "Reviewing",
-  SHORTLISTED: "Shortlisted",
-  INTERVIEWING: "Interviewing",
-  OFFERED: "Offered",
-  ACCEPTED: "Accepted",
-  REJECTED: "Rejected",
-  WITHDRAWN: "Withdrawn",
+// Map ApplicationStatus enum to display config
+const statusConfig: Record<
+  ApplicationStatus,
+  { label: string; color: string; icon: typeof Clock }
+> = {
+  PENDING: {
+    label: "New",
+    color: "bg-info/10 text-info border-info/20",
+    icon: Clock,
+  },
+  REVIEWING: {
+    label: "Reviewing",
+    color: "bg-warning/10 text-warning border-warning/20",
+    icon: Eye,
+  },
+  SHORTLISTED: {
+    label: "Shortlisted",
+    color: "bg-accent/10 text-accent border-accent/20",
+    icon: Star,
+  },
+  INTERVIEWING: {
+    label: "Interview",
+    color: "bg-primary/10 text-primary border-primary/20",
+    icon: Calendar,
+  },
+  OFFERED: {
+    label: "Offered",
+    color: "bg-success/10 text-success border-success/20",
+    icon: CheckCircle,
+  },
+  ACCEPTED: {
+    label: "Accepted",
+    color: "bg-success/10 text-success border-success/20",
+    icon: CheckCircle,
+  },
+  REJECTED: {
+    label: "Rejected",
+    color: "bg-destructive/10 text-destructive border-destructive/20",
+    icon: XCircle,
+  },
+  WITHDRAWN: {
+    label: "Withdrawn",
+    color: "bg-muted text-muted-foreground",
+    icon: XCircle,
+  },
 };
 
-const statusColors: Record<ApplicationStatus, string> = {
-  PENDING: "badge-info",
-  REVIEWING: "badge-warning",
-  SHORTLISTED: "badge-success",
-  INTERVIEWING: "badge-primary",
-  OFFERED: "badge-success",
-  ACCEPTED: "badge-success",
-  REJECTED: "badge-error",
-  WITHDRAWN: "badge-ghost",
-};
+export default function Applications() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">(
+    "all"
+  );
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
 
-export const ApplicationsPage = () => {
-  const { hasRole } = useAuthStore();
-  const [filters, setFilters] = useState<ApplicationFilters>({
-    page: 1,
-    limit: 20,
-    sortBy: "createdAt",
-    sortOrder: "desc",
-  });
-
+  // Fetch applications from API
   const { data, isLoading, error } = useQuery({
-    queryKey: ["applications", filters],
-    queryFn: () => getApplications(filters),
+    queryKey: ["applications", { statusFilter, page }],
+    queryFn: () =>
+      getApplications({
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        page,
+        limit: 20,
+        sortBy: "submittedAt",
+        sortOrder: "desc",
+      }),
+    retry: 1,
   });
 
-  const handleFilterChange = (key: keyof ApplicationFilters, value: any) => {
-    setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
+  // Mutation for updating application status
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: ApplicationStatus }) =>
+      updateApplicationStatus(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      toast.success("Application status updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || "Failed to update application status");
+    },
+  });
+
+  const applications = data?.applications || [];
+  const pagination = data?.pagination;
+
+  // Client-side filtering (in addition to server-side)
+  const filteredApplications = applications.filter((app) => {
+    const candidateName =
+      app.applicant?.profile?.fullName || app.applicant?.email || "";
+    const jobTitle = app.job?.title || "";
+    const department = app.job?.department || "";
+
+    const matchesSearch =
+      candidateName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      app.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesDepartment =
+      departmentFilter === "all" || department === departmentFilter;
+    return matchesSearch && matchesDepartment;
+  });
+
+  const handleStatusChange = (
+    applicationId: string,
+    newStatus: ApplicationStatus
+  ) => {
+    updateStatusMutation.mutate({ id: applicationId, status: newStatus });
   };
 
-  const handlePageChange = (page: number) => {
-    setFilters((prev) => ({ ...prev, page }));
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // Get unique departments from all applications
+  const departments = [
+    ...new Set(applications.map((a) => a.job?.department).filter(Boolean)),
+  ];
 
-  const isRecruiter = hasRole(Role.RECRUITER) || hasRole(Role.HR_MANAGER);
+  if (error) {
+    return (
+      <AppLayout title="Applications">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <XCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              Error loading applications
+            </h3>
+            <p className="text-muted-foreground">Please try again later</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">
-          {isRecruiter ? "All Applications" : "My Applications"}
-        </h1>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Status Filter */}
+    <AppLayout title="Applications">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Status
-            </label>
-            <select
-              value={filters.status || ""}
-              onChange={(e) =>
-                handleFilterChange("status", e.target.value || undefined)
-              }
-              className="input w-full"
-            >
-              <option value="">All Statuses</option>
-              {Object.entries(statusLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+            <h1 className="text-2xl font-bold text-foreground">Applications</h1>
+            <p className="text-muted-foreground">
+              Review and manage all job applications
+            </p>
           </div>
-
-          {/* Job Filter (for recruiters) */}
-          {isRecruiter && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Job ID
-              </label>
-              <input
-                type="text"
-                placeholder="Filter by job ID"
-                value={filters.jobId || ""}
-                onChange={(e) =>
-                  handleFilterChange("jobId", e.target.value || undefined)
-                }
-                className="input w-full"
-              />
-            </div>
-          )}
-
-          {/* Sort */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Sort By
-            </label>
-            <select
-              value={`${filters.sortBy}-${filters.sortOrder}`}
-              onChange={(e) => {
-                const [sortBy, sortOrder] = e.target.value.split("-");
-                handleFilterChange("sortBy", sortBy);
-                handleFilterChange("sortOrder", sortOrder as "asc" | "desc");
-              }}
-              className="input w-full"
-            >
-              <option value="createdAt-desc">Newest First</option>
-              <option value="createdAt-asc">Oldest First</option>
-              <option value="status-asc">Status A-Z</option>
-            </select>
-          </div>
+          <Button variant="outline" className="gap-2">
+            <Download className="h-4 w-4" />
+            Export Report
+          </Button>
         </div>
-      </div>
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-          <p className="mt-2 text-gray-600">Loading applications...</p>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <p className="text-red-800">Failed to load applications.</p>
-        </div>
-      )}
-
-      {/* Applications List */}
-      {data && (
-        <>
-          {data.applications.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600 text-lg">No applications found</p>
-              <p className="text-gray-500 mt-2">
-                {isRecruiter
-                  ? "No applications match your filters."
-                  : "You haven't applied to any jobs yet."}
-              </p>
-              {!isRecruiter && (
-                <Link to="/jobs" className="btn-primary mt-4">
-                  Browse Jobs
-                </Link>
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Job
-                      </th>
-                      {isRecruiter && (
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Applicant
-                        </th>
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {Object.entries(statusConfig)
+            .slice(0, 5)
+            .map(([key, config]) => {
+              const count = applications.filter((a) => a.status === key).length;
+              const Icon = config.icon;
+              return (
+                <div
+                  key={key}
+                  className="card-elevated p-4 cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => setStatusFilter(key as ApplicationStatus)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        "p-2 rounded-lg",
+                        config.color.split(" ")[0]
                       )}
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Applied
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {data.applications.map((application) => (
-                      <tr key={application.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {application.job ? (
-                            <Link
-                              to={`/jobs/${application.job.id}`}
-                              className="text-primary-600 hover:text-primary-700 font-medium"
-                            >
-                              {application.job.title}
-                            </Link>
-                          ) : (
-                            <span className="text-gray-500">
-                              Job ID: {application.jobId}
-                            </span>
-                          )}
-                        </td>
-                        {isRecruiter && (
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {application.applicant ? (
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">
-                                  {application.applicant.profile?.fullName ||
-                                    application.applicant.email}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  {application.applicant.email}
-                                </p>
-                              </div>
-                            ) : (
-                              <span className="text-gray-500">Unknown</span>
-                            )}
-                          </td>
-                        )}
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`badge ${statusColors[application.status]}`}
-                          >
-                            {statusLabels[application.status]}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(
-                            application.submittedAt
-                          ).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <Link
-                            to={`/applications/${application.id}`}
-                            className="text-primary-600 hover:text-primary-900"
-                          >
-                            View
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination */}
-              {data.pagination.totalPages > 1 && (
-                <div className="mt-6 flex justify-center">
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handlePageChange(data.pagination.page - 1)}
-                      disabled={!data.pagination.hasPrevious}
-                      className="btn-ghost disabled:opacity-50"
                     >
-                      Previous
-                    </button>
-                    <span className="flex items-center px-4">
-                      Page {data.pagination.page} of{" "}
-                      {data.pagination.totalPages}
-                    </span>
-                    <button
-                      onClick={() => handlePageChange(data.pagination.page + 1)}
-                      disabled={!data.pagination.hasNext}
-                      className="btn-ghost disabled:opacity-50"
-                    >
-                      Next
-                    </button>
+                      <Icon
+                        className={cn("h-4 w-4", config.color.split(" ")[1])}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">
+                        {isLoading ? "-" : count}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {config.label}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              )}
-            </>
-          )}
-        </>
-      )}
-    </div>
+              );
+            })}
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, position, or application ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select
+            value={statusFilter}
+            onValueChange={(value: string) =>
+              setStatusFilter(value as ApplicationStatus | "all")
+            }
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              {Object.entries(statusConfig).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  {config.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={departmentFilter}
+            onValueChange={(value) => setDepartmentFilter(value || "all")}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="All Departments" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Departments</SelectItem>
+              {departments.map((dept) => (
+                <SelectItem key={dept as string} value={dept as string}>
+                  {dept}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Applications Table */}
+        <div className="card-elevated overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Application</th>
+                  <th>Position</th>
+                  <th>Status</th>
+                  <th>Applied</th>
+                  <th className="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+                      <p className="mt-2 text-muted-foreground">
+                        Loading applications...
+                      </p>
+                    </td>
+                  </tr>
+                ) : filteredApplications.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-12">
+                      <p className="text-muted-foreground">
+                        No applications found
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredApplications.map((app, index) => {
+                    const status = statusConfig[app.status];
+                    const candidateName =
+                      app.applicant?.profile?.fullName ||
+                      app.applicant?.email ||
+                      "Unknown";
+                    const candidateInitials = candidateName
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2);
+
+                    return (
+                      <tr
+                        key={app.id}
+                        className="animate-slide-up"
+                        style={{ animationDelay: `${index * 30}ms` }}
+                      >
+                        <td>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-medium">
+                              {candidateInitials}
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground">
+                                {candidateName}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {app.applicant?.email}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div>
+                            <p className="font-medium text-foreground">
+                              {app.job?.title || "N/A"}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {app.job?.department || "N/A"}
+                            </p>
+                          </div>
+                        </td>
+                        <td>
+                          <Badge className={cn("border", status.color)}>
+                            {status.label}
+                          </Badge>
+                        </td>
+                        <td>
+                          <div className="text-sm">
+                            <p className="text-foreground">
+                              {new Date(app.submittedAt).toLocaleDateString()}
+                            </p>
+                            <p className="text-muted-foreground">
+                              {new Date(app.submittedAt).toLocaleTimeString()}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Application
+                              </DropdownMenuItem>
+                              {app.resumeUrl && (
+                                <DropdownMenuItem>
+                                  <FileText className="h-4 w-4 mr-2" />
+                                  View Resume
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem>
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                Send Message
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleStatusChange(
+                                    app.id,
+                                    "SHORTLISTED" as ApplicationStatus
+                                  )
+                                }
+                              >
+                                <Star className="h-4 w-4 mr-2" />
+                                Shortlist
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleStatusChange(
+                                    app.id,
+                                    "INTERVIEWING" as ApplicationStatus
+                                  )
+                                }
+                              >
+                                <Calendar className="h-4 w-4 mr-2" />
+                                Schedule Interview
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() =>
+                                  handleStatusChange(
+                                    app.id,
+                                    "REJECTED" as ApplicationStatus
+                                  )
+                                }
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Reject
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Pagination */}
+        {pagination && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Showing {filteredApplications.length} of {pagination.total}{" "}
+              applications
+              {pagination.totalPages > 1 &&
+                ` (Page ${pagination.page} of ${pagination.totalPages})`}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!pagination.hasPrevious || isLoading}
+                onClick={() => setPage(page - 1)}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!pagination.hasNext || isLoading}
+                onClick={() => setPage(page + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </AppLayout>
   );
-};
+}

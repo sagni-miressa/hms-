@@ -11,4 +11,13 @@ export {
   TableCell,
 } from "./Table";
 export { Badge } from "./Badge";
-export { Select } from "./Select";
+export {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectGroup,
+  SelectLabel,
+  SelectSeparator,
+} from "./Select";

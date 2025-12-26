@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
-import { Navbar } from "@/components/Dashboard/Navbar";
-import { Sidebar } from "@/components/Dashboard/Sidebar";
+import { Navbar } from "@/components/Dashboard-1/Navbar";
+import { Sidebar } from "@/components/Dashboard-1/Sidebar";
 import { useAuthStore } from "@/stores/authStore";
 
 export const DashboardLayout = () => {
