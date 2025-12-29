@@ -72,13 +72,11 @@ api.interceptors.response.use(
         } catch (refreshError) {
           // Refresh failed - logout
           useAuthStore.getState().logout();
-          window.location.href = "/login";
           return Promise.reject(refreshError);
         }
       } else {
         // No refresh token - logout
         useAuthStore.getState().logout();
-        window.location.href = "/login";
       }
     }
 
@@ -88,7 +86,12 @@ api.interceptors.response.use(
     const errorCode = error.response?.data?.error?.code;
 
     // Don't show toast for certain errors (let component handle)
-    const silentErrors = ["VALIDATION_ERROR", "RESOURCE_NOT_FOUND"];
+    const silentErrors = [
+      "VALIDATION_ERROR",
+      "RESOURCE_NOT_FOUND",
+      "INVALID_CREDENTIALS",
+      "TOKEN_EXPIRED",
+    ];
     if (!errorCode || !silentErrors.includes(errorCode)) {
       toast.error(errorMessage);
     }

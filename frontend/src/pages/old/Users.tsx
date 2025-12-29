@@ -14,9 +14,16 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/Table";
-import { Badge } from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/Modal";
-import { Select } from "@/components/ui/Select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Role, ClearanceLevel } from "@/types";
 
 export const UsersPage = () => {
@@ -133,7 +140,7 @@ export const UsersPage = () => {
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {user.roles.map((role) => (
-                        <Badge key={role} variant="info" size="sm">
+                        <Badge key={role} variant="info">
                           {role}
                         </Badge>
                       ))}
@@ -194,11 +201,7 @@ export const UsersPage = () => {
                   updateMutation.mutate({
                     userId: selectedUser.id,
                     data: {
-                      roles: formData
-                        .get("roles")
-                        ?.toString()
-                        .split(",")
-                        .filter(Boolean) as Role[],
+                      roles: formData.getAll("roles") as Role[],
                       clearanceLevel: formData.get(
                         "clearanceLevel"
                       ) as ClearanceLevel,
@@ -223,16 +226,28 @@ export const UsersPage = () => {
               </label>
               <p className="text-gray-900">{selectedUser.email}</p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
                 Roles
               </label>
-              <Select
-                name="roles"
-                options={roleOptions}
-                defaultValue={selectedUser.roles.join(",")}
-                multiple
-              />
+              <div className="grid grid-cols-2 gap-2">
+                {roleOptions.map((role) => (
+                  <div key={role.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`role-${role.value}`}
+                      name="roles"
+                      value={role.value}
+                      defaultChecked={selectedUser.roles.includes(role.value)}
+                    />
+                    <label
+                      htmlFor={`role-${role.value}`}
+                      className="text-sm font-normal text-gray-700 cursor-pointer"
+                    >
+                      {role.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -240,9 +255,19 @@ export const UsersPage = () => {
               </label>
               <Select
                 name="clearanceLevel"
-                options={clearanceOptions}
                 defaultValue={selectedUser.clearanceLevel}
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select clearance level" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clearanceOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Input

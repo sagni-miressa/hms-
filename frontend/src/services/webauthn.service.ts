@@ -66,3 +66,11 @@ export const loginWithBiometric = async (
 
   return extractData(finishResponse);
 };
+
+/**
+ * Get all biometric credentials for the current user
+ */
+export const getBiometricCredentials = async (): Promise<any[]> => {
+  const response = await api.get<ApiResponse<any[]>>("/webauthn/credentials");
+  return extractData(response);
+};

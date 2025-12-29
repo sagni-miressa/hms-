@@ -15,7 +15,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Building2,
-  Mail,
   Bell,
   Globe,
   Palette,
@@ -24,14 +23,13 @@ import {
   Plug,
   Users,
   FileText,
-  Clock,
   Save,
   RefreshCw,
   CheckCircle,
-  ExternalLink,
 } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { MFASetup } from "@/pages/Auth/MFASetup";
 
 export default function Settings() {
   const [companyName, setCompanyName] = useState("RecruitHub Inc.");
@@ -105,7 +103,7 @@ export default function Settings() {
         </div>
 
         <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6 h-auto gap-2 bg-transparent p-0">
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-7 h-auto gap-2 bg-transparent p-0">
             <TabsTrigger
               value="general"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
@@ -113,6 +111,14 @@ export default function Settings() {
               <Building2 className="h-4 w-4" />
               <span className="hidden sm:inline">General</span>
             </TabsTrigger>
+            <TabsTrigger
+              value="mfa"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
+            >
+              <Shield className="h-4 w-4" />
+              <span className="hidden sm:inline">MFA Setup</span>
+            </TabsTrigger>
+
             <TabsTrigger
               value="notifications"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2"
@@ -237,6 +243,11 @@ export default function Settings() {
                 Save Changes
               </Button>
             </div>
+          </TabsContent>
+
+          {/* MFA Setup */}
+          <TabsContent value="mfa" className="space-y-6">
+            <MFASetup />
           </TabsContent>
 
           {/* Notifications */}

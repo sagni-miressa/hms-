@@ -5,14 +5,14 @@ import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useState } from "react";
-import { Eye, EyeOff, Building2 } from "lucide-react";
+import { Eye, EyeOff} from "lucide-react";
 import { register as registerUser } from "@/services/auth.service";
 import { Recaptcha } from "@/components/Recaptcha";
-import { LogoIcon } from "@/components/icons/LogoIcon";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
 import LinkedInIcon from "@/components/icons/LinkedInIcon";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Logo } from "@/components/icons/Logo";
 
 const registerSchema = z
   .object({
@@ -105,18 +105,6 @@ export const RegisterPage = () => {
       <div className="flex-1 bg-background order-1 lg:order-none overflow-y-auto scrollbar-hide h-full">
         <div className="min-h-full flex items-center justify-center p-8">
           <div className="w-full max-w-md space-y-8 animate-fade-in my-8">
-            {/* Mobile Logo */}
-            <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-                <Building2 className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">
-                  RecruitHub
-                </h1>
-              </div>
-            </div>
-
             <div className="text-center lg:text-left">
               <h2 className="text-2xl font-bold text-foreground">
                 Create an Account
@@ -397,14 +385,7 @@ export const RegisterPage = () => {
 
         {/* Content Layer */}
         <div className="relative z-20 flex flex-col justify-between p-12 text-primary-foreground w-full">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20">
-              <LogoIcon />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">RecruitHub</h1>
-            </div>
-          </div>
+          <Logo />
 
           <div className="space-y-8">
             <div>

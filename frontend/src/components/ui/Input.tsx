@@ -1,4 +1,4 @@
-import { InputHTMLAttributes, forwardRef } from "react";
+import { InputHTMLAttributes, forwardRef, useId } from "react";
 import { clsx } from "clsx";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -9,7 +9,8 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, helperText, id, ...props }, ref) => {
-    const inputId = id || `input-${Math.random().toString(36).substring(7)}`;
+    const generatedId = useId();
+    const inputId = id || generatedId;
 
     return (
       <div className="w-full">
@@ -30,7 +31,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {
               "border-gray-300 focus:border-primary/50 focus:ring-primary/80":
                 !error,
-              "border-red-500 focus:border-red-500 focus:ring-destructive": error,
+              "border-red-500 focus:border-red-500 focus:ring-destructive":
+                error,
             },
             className
           )}

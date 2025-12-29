@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Badge } from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/badge";
 import {
   Search,
   Download,
@@ -104,7 +104,7 @@ export default function Applications() {
         status: statusFilter !== "all" ? statusFilter : undefined,
         page,
         limit: 20,
-        sortBy: "submittedAt",
+        sortBy: "createdAt",
         sortOrder: "desc",
       }),
     retry: 1,
@@ -356,10 +356,10 @@ export default function Applications() {
                         <td>
                           <div className="text-sm">
                             <p className="text-foreground">
-                              {new Date(app.submittedAt).toLocaleDateString()}
+                              {new Date(app.createdAt).toLocaleDateString()}
                             </p>
                             <p className="text-muted-foreground">
-                              {new Date(app.submittedAt).toLocaleTimeString()}
+                              {new Date(app.createdAt).toLocaleTimeString()}
                             </p>
                           </div>
                         </td>

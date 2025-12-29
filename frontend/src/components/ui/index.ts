@@ -10,7 +10,7 @@ export {
   TableRow,
   TableCell,
 } from "./Table";
-export { Badge } from "./Badge";
+export { Badge } from "./badge";
 export {
   Select,
   SelectContent,

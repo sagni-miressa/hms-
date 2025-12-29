@@ -1,4 +1,6 @@
-import { Bell, Search, User, Shield, ChevronDown } from "lucide-react";
+import { Bell, Search, User, Shield, ChevronDown, LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/stores/authStore";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
@@ -10,16 +12,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { SecurityBadge } from "@/components/ui/SecurityBadge";
-import { ClearanceBadge } from "@/components/ui/ClearanceBadge";
 
 interface AppHeaderProps {
   title?: string;
 }
 
 export function AppHeader({ title }: AppHeaderProps) {
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
+  if (!user) return null;
+
   return (
-    <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+    <header className="sticky top-0 z-50 flex h-10 items-center justify-between border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-8 px-4">
       <div className="flex items-center gap-4">
         <SidebarTrigger className="h-8 w-8" />
         {title && (
@@ -34,13 +44,8 @@ export function AppHeader({ title }: AppHeaderProps) {
           <Input
             type="search"
             placeholder="Search candidates, jobs..."
-            className="w-64 pl-9 bg-muted/50"
+            className="w-96 pl-9 bg-muted/50"
           />
-        </div>
-
-        {/* Session Status */}
-        <div className="hidden lg:flex items-center gap-2">
-          <SecurityBadge status="secure" label="Session Active" />
         </div>
 
         {/* Notifications */}
@@ -59,9 +64,11 @@ export function AppHeader({ title }: AppHeaderProps) {
                 <User className="h-4 w-4" />
               </div>
               <div className="hidden md:flex flex-col items-start text-left">
-                <span className="text-sm font-medium">Sarah Mitchell</span>
+                <span className="text-sm font-medium">
+                  {user.username || user.email.split("@")[0]}
+                </span>
                 <span className="text-xs text-muted-foreground">
-                  HR Manager
+                  {user.roles[0]?.toLowerCase().replace("_", " ")}
                 </span>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -70,12 +77,12 @@ export function AppHeader({ title }: AppHeaderProps) {
           <DropdownMenuContent align="end" className="w-64">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">Sarah Mitchell</p>
-                <p className="text-xs text-muted-foreground">
-                  sarah.mitchell@company.com
+                <p className="text-sm font-medium">
+                  {user.username || user.email.split("@")[0]}
                 </p>
-                <div className="flex gap-2">
-                  <ClearanceBadge level="confidential" />
+                <p className="text-xs text-muted-foreground">{user.email}</p>
+                <div className="flex gap-2 text-xs">
+                  {user.roles[0]?.toLowerCase().replace("_", " ")}
                 </div>
               </div>
             </DropdownMenuLabel>
@@ -89,7 +96,11 @@ export function AppHeader({ title }: AppHeaderProps) {
               Security Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={handleLogout}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
               Sign Out
             </DropdownMenuItem>
           </DropdownMenuContent>

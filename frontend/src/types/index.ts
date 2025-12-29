@@ -140,7 +140,7 @@ export interface Application {
   answers?: Record<string, any> | null;
   resumeUrl?: string | null;
   rejectionReason?: string | null;
-  submittedAt: string;
+
   createdAt: string;
   updatedAt: string;
   job?: Job;

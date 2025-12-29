@@ -11,7 +11,7 @@ import type { JobFilters } from "@/types";
 import { Role } from "@/types";
 import { useAuthStore } from "@/stores/authStore";
 
-export const JobsPage = () => {
+export const JobsPagePublic = () => {
   const { hasRole } = useAuthStore();
   const [filters, setFilters] = useState<JobFilters>({
     page: 1,

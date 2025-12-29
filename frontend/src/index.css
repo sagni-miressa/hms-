@@ -232,7 +232,7 @@
   
   /* Kanban Column */
   .kanban-column {
-    @apply bg-muted/30 rounded-lg p-4 min-h-[500px];
+    @apply bg-muted/30 rounded-lg p-2 min-h-[500px];
   }
   
   .kanban-card {

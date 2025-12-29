@@ -3,7 +3,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const PublicLayout = () => {
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const { isAuthenticated, logout } = useAuthStore();
 
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-text-main dark:text-gray-100 overflow-x-hidden antialiased min-h-screen flex flex-col">
@@ -54,9 +54,6 @@ export const PublicLayout = () => {
               <ThemeToggle/>
               {isAuthenticated ? (
                 <>
-                  <span className="text-sm font-medium text-text-main dark:text-white">
-                    {user?.email}
-                  </span>
                   <Link
                     to="/dashboard"
                     className="px-5 py-2.5 text-sm font-bold text-white bg-primary hover:bg-primary-hover rounded-lg transition-all shadow-lg shadow-primary/20"

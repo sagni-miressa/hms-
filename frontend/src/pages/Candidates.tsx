@@ -7,11 +7,8 @@ import {
   Search,
   Filter,
   MoreHorizontal,
-  User,
   Mail,
-  Phone,
   Calendar,
-  GripVertical,
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -227,11 +224,11 @@ export default function Candidates() {
         </div>
 
         {/* Kanban Board */}
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="flex gap overflow-x-auto pb-4">
           {stages.map((stage) => {
             const stageCandidates = getCandidatesByStage(stage.id);
             return (
-              <div key={stage.id} className="flex-shrink-0 w-80">
+              <div key={stage.id} className="flex-1 min-w-0">
                 <div className="kanban-column">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
@@ -246,7 +243,7 @@ export default function Candidates() {
                       {stageCandidates.length}
                     </span>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {stageCandidates.map((candidate, index) => (
                       <div
                         key={candidate.id}

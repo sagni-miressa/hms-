@@ -4,14 +4,12 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { ClearanceBadge, ClearanceLevel } from "@/components/ui/ClearanceBadge";
 import { StatusIndicator } from "@/components/ui/StatusIndicator";
-import { SecureActionButton } from "@/components/ui/SecureActionButton";
 import {
   Search,
   Filter,
   Plus,
   Shield,
   UserCog,
-  Mail,
   MoreVertical,
   Edit,
   Key,
@@ -25,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -296,7 +294,11 @@ export default function UserManagement() {
                     <td className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                          >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
