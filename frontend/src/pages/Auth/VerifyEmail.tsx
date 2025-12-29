@@ -1,13 +1,15 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ShieldCheck } from "lucide-react";
 import { verifyEmail, resendVerification } from "@/services/auth.service";
-import { LogoIcon } from "@/components/icons/LogoIcon";
+import { Button } from "@/components/ui/Button";
+import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/icons/Logo";
 
 const verifySchema = z.object({
   code: z
@@ -17,6 +19,51 @@ const verifySchema = z.object({
 });
 
 type VerifyForm = z.infer<typeof verifySchema>;
+
+const BrandingPanel = memo(() => (
+  <div className="hidden lg:flex lg:w-1/2 bg-primary sticky top-0 overflow-hidden h-screen">
+    {/* Background Image - Full Coverage */}
+    <div className="absolute inset-0 z-0">
+      <img
+        alt="Office workplace"
+        className="w-full h-full object-cover"
+        src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80"
+      />
+    </div>
+
+    {/* Gradient Overlay */}
+    <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary/90 to-primary/80 z-10" />
+
+    {/* Content Layer */}
+    <div className="relative z-20 flex flex-col justify-between p-12 text-primary-foreground w-full">
+      <Logo />
+
+      <div className="space-y-8">
+        <div>
+          <h2 className="text-4xl font-bold leading-tight">
+            Verify your identity
+            <br />
+            to get started.
+          </h2>
+          <p className="mt-4 text-lg text-primary-foreground/90 max-w-md">
+            "We take your account security seriously. Verifying your email
+            ensures that only you can access your data."
+          </p>
+        </div>
+      </div>
+
+      <p className="text-sm text-primary-foreground/60">
+        © 2025 RecruitHub. All rights reserved.
+      </p>
+    </div>
+
+    {/* Decorative Elements */}
+    <div className="absolute -right-32 -bottom-32 w-96 h-96 rounded-full bg-accent/20 blur-3xl z-[5]" />
+    <div className="absolute -right-16 top-1/4 w-64 h-64 rounded-full bg-primary-foreground/10 blur-2xl z-[5]" />
+  </div>
+));
+
+BrandingPanel.displayName = "BrandingPanel";
 
 export const VerifyEmailPage = () => {
   const navigate = useNavigate();
@@ -94,7 +141,6 @@ export const VerifyEmailPage = () => {
   }, [resendCooldown, canResend]);
 
   const handleCodeChange = (index: number, value: string) => {
-    // Only allow digits
     if (value && !/^\d$/.test(value)) {
       return;
     }
@@ -104,12 +150,10 @@ export const VerifyEmailPage = () => {
     setCode(newCode);
     clearErrors("code");
 
-    // Auto-focus next input
     if (value && index < 5) {
       inputRefs[index + 1].current?.focus();
     }
 
-    // Auto-submit when all 6 digits are entered
     if (newCode.every((digit) => digit !== "") && index === 5) {
       const fullCode = newCode.join("");
       verifyMutation.mutate({
@@ -139,11 +183,9 @@ export const VerifyEmailPage = () => {
       setCode(newCode);
       clearErrors("code");
 
-      // Focus the last filled input or the last one
       const lastFilledIndex = Math.min(newCode.length - 1, 5);
       inputRefs[lastFilledIndex].current?.focus();
 
-      // Auto-submit if all 6 digits are pasted
       if (pastedText.length === 6 && email) {
         verifyMutation.mutate({
           code: pastedText,
@@ -162,7 +204,6 @@ export const VerifyEmailPage = () => {
 
     const fullCode = code.join("");
 
-    // Validate code
     if (fullCode.length !== 6) {
       setError("code", {
         type: "manual",
@@ -190,11 +231,9 @@ export const VerifyEmailPage = () => {
       toast.error("Email address is required");
       return;
     }
-
     resendMutation.mutate(email);
   };
 
-  // Redirect if no email provided
   useEffect(() => {
     if (!email) {
       toast.error("Email address is required for verification");
@@ -203,147 +242,127 @@ export const VerifyEmailPage = () => {
   }, [email, navigate]);
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 bg-recruit-bg-light relative overflow-hidden">
-      {/* Decorative Background */}
-      <div className="fixed inset-0 pointer-events-none opacity-40 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary-100 via-transparent to-transparent" />
+    <div className="h-screen flex overflow-hidden">
+      <BrandingPanel />
 
-      {/* Central Card Container */}
-      <div className="relative w-full max-w-[480px] bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
-        {/* Header Section with Logo */}
-        <div className="pt-10 pb-2 flex justify-center">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="flex items-center justify-center size-8 rounded bg-primary-500/10 text-primary-500">
-              <LogoIcon />
+      {/* Right Panel - Form Section */}
+      <div className="flex-1 bg-background overflow-y-auto scrollbar-hide h-full">
+        <div className="min-h-full flex items-center justify-center p-8">
+          <div className="w-full max-w-md space-y-8 animate-fade-in my-8">
+            <div className="text-center lg:text-left">
+              <h1 className="text-2xl font-bold text-foreground">
+                Verify your email
+              </h1>
+              <p className="mt-2 text-muted-foreground leading-relaxed">
+                We've sent a verification code to{" "}
+                <span className="font-semibold text-foreground">{email}</span>.
+                Check your inbox and enter the code below.
+              </p>
             </div>
-            <h2 className="text-gray-900 text-lg font-bold">RecruitHub</h2>
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      One-Time Password
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Enter the 6-digit code we sent you. It will expire in 10
+                      minutes.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Label className="text-center block">Verification Code</Label>
+                <div className="flex gap-2 sm:gap-3 justify-center">
+                  {code.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={inputRefs[index]}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleCodeChange(index, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(index, e)}
+                      onPaste={index === 0 ? handlePaste : undefined}
+                      autoComplete="off"
+                      autoFocus={index === 0}
+                      className={`w-12 h-12 sm:w-14 sm:h-14 text-center text-2xl font-bold rounded-lg bg-background border transition-all focus:outline-none focus:ring-2 ${
+                        errors.code
+                          ? "border-destructive focus:border-destructive focus:ring-destructive"
+                          : "border-border focus:border-primary focus:ring-primary"
+                      }`}
+                    />
+                  ))}
+                </div>
+                {errors.code && (
+                  <p className="text-center text-sm text-destructive">
+                    {errors.code.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-4 pt-2">
+                <Button
+                  type="submit"
+                  className="w-full h-12 gap-2"
+                  disabled={verifyMutation.isPending}
+                >
+                  {verifyMutation.isPending ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      Verify Email
+                    </>
+                  )}
+                </Button>
+
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Didn't receive the email?{" "}
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      disabled={!canResend || resendMutation.isPending}
+                      className="font-semibold text-primary hover:underline transition-colors ml-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {resendCooldown > 0
+                        ? `Click to resend (${resendCooldown}s)`
+                        : "Click to resend"}
+                    </button>
+                  </p>
+                </div>
+
+                <Link
+                  to="/login"
+                  className="group flex w-full items-center justify-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium h-10"
+                >
+                  <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
+                  Back to login
+                </Link>
+              </div>
+            </form>
+
+            <div className="text-center pt-8">
+              <p className="text-xs text-muted-foreground/60">
+                © 2025 RecruitHub. Having trouble?{" "}
+                <a
+                  href="#"
+                  className="underline hover:text-primary transition-colors"
+                >
+                  Contact Support
+                </a>
+              </p>
+            </div>
           </div>
         </div>
-
-        {/* Page Heading */}
-        <div className="px-8 pb-4 text-center">
-          <h1 className="text-gray-900 text-3xl font-black leading-tight tracking-[-0.033em] mb-3">
-            Verify your email
-          </h1>
-          <p className="text-[#897561] text-base font-normal leading-relaxed">
-            We've sent a verification code to{" "}
-            <span className="font-semibold text-gray-800">{email}</span>. Please
-            check your inbox and enter the code below.
-          </p>
-        </div>
-
-        {/* Form Section */}
-        <div className="p-8 pt-4 flex flex-col gap-6">
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-            className="flex flex-col gap-6"
-          >
-            {/* Verification Code Input - 6 Boxes */}
-            <label className="flex flex-col gap-2">
-              <p className="text-gray-900 text-sm font-bold leading-normal pb-2 uppercase tracking-wide text-center">
-                Verification Code
-              </p>
-              <div className="flex gap-3 justify-center">
-                {code.map((digit, index) => (
-                  <input
-                    key={index}
-                    ref={inputRefs[index]}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleCodeChange(index, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(index, e)}
-                    onPaste={index === 0 ? handlePaste : undefined}
-                    autoComplete="off"
-                    autoFocus={index === 0}
-                    className={`w-14 h-14 text-center text-2xl font-bold rounded-lg bg-gray-50 border text-gray-900 transition-all focus:outline-none focus:ring-2 ${
-                      errors.code
-                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                        : "border-gray-200 focus:border-primary-500 focus:ring-primary-500"
-                    }`}
-                  />
-                ))}
-              </div>
-              {errors.code && (
-                <p className="mt-1 text-sm text-red-600 text-center">
-                  {errors.code.message}
-                </p>
-              )}
-            </label>
-
-            {/* Verify Button */}
-            <button
-              type="submit"
-              disabled={verifyMutation.isPending}
-              className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-primary-500 hover:bg-primary-600 active:bg-primary-700 transition-all duration-200 shadow-md hover:shadow-lg text-white text-base font-bold leading-normal tracking-[0.015em] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {verifyMutation.isPending ? (
-                <svg
-                  className="animate-spin h-5 w-5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-              ) : (
-                <span className="truncate">Verify Email</span>
-              )}
-            </button>
-
-            {/* Resend Code */}
-            <div className="text-center">
-              <p className="text-sm text-[#897561]">
-                Didn't receive the email?{" "}
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={!canResend || resendMutation.isPending}
-                  className="font-semibold text-primary-500 hover:text-primary-600 hover:underline transition-colors ml-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {resendCooldown > 0
-                    ? `Click to resend (${resendCooldown}s)`
-                    : "Click to resend"}
-                </button>
-              </p>
-            </div>
-          </form>
-
-          {/* Back Link */}
-          <Link
-            to="/login"
-            className="group flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg h-10 px-4 bg-transparent text-[#897561] hover:text-gray-900 transition-colors duration-200 text-sm font-bold leading-normal tracking-[0.015em]"
-          >
-            <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform duration-200" />
-            <span className="truncate">Back to log in</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* Simple Footer */}
-      <div className="mt-8 text-center relative z-10">
-        <p className="text-xs text-[#897561]/70">
-          © 2025 RecruitHub Inc. Need help?{" "}
-          <a
-            href="#"
-            className="underline hover:text-primary-500 transition-colors"
-          >
-            Contact Support
-          </a>
-        </p>
       </div>
     </div>
   );

@@ -3,17 +3,65 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
+import { memo } from "react";
 import toast from "react-hot-toast";
-import { Mail, ArrowLeft } from "lucide-react";
-import { LogoIcon } from "@/components/icons/LogoIcon";
+import { Mail, ArrowLeft, Send } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/icons/Logo";
 import { forgotPassword } from "@/services/auth.service";
-import { Button, Input } from "@/components/ui";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Invalid email address"),
 });
 
 type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>;
+
+const BrandingPanel = memo(() => (
+  <div className="hidden lg:flex lg:w-1/2 bg-primary sticky top-0 overflow-hidden h-screen">
+    {/* Background Image - Full Coverage */}
+    <div className="absolute inset-0 z-0">
+      <img
+        alt="Office collaboration"
+        className="w-full h-full object-cover"
+        src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80"
+      />
+    </div>
+
+    {/* Gradient Overlay */}
+    <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary/90 to-primary/80 z-10" />
+
+    {/* Content Layer */}
+    <div className="relative z-20 flex flex-col justify-between p-12 text-primary-foreground w-full">
+      <Logo />
+
+      <div className="space-y-8">
+        <div>
+          <h2 className="text-4xl font-bold leading-tight">
+            Recover your access
+            <br />
+            with ease.
+          </h2>
+          <p className="mt-4 text-lg text-primary-foreground/90 max-w-md">
+            "Don't worry, it happens to the best of us. We'll help you get back
+            into your account in no time."
+          </p>
+        </div>
+      </div>
+
+      <p className="text-sm text-primary-foreground/60">
+        © 2025 RecruitHub. All rights reserved.
+      </p>
+    </div>
+
+    {/* Decorative Elements */}
+    <div className="absolute -right-32 -bottom-32 w-96 h-96 rounded-full bg-accent/20 blur-3xl z-[5]" />
+    <div className="absolute -right-16 top-1/4 w-64 h-64 rounded-full bg-primary-foreground/10 blur-2xl z-[5]" />
+  </div>
+));
+
+BrandingPanel.displayName = "BrandingPanel";
 
 export const ForgotPasswordPage = () => {
   const navigate = useNavigate();
@@ -32,7 +80,6 @@ export const ForgotPasswordPage = () => {
       toast.success(
         "If an account exists with this email, reset instructions have been sent."
       );
-      // Optionally navigate back to login after a delay
       setTimeout(() => {
         navigate("/login");
       }, 2000);
@@ -51,117 +98,92 @@ export const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 bg-recruit-bg-light relative overflow-hidden">
-      {/* Decorative Background */}
-      <div className="fixed inset-0 pointer-events-none opacity-40 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary-100 via-transparent to-transparent" />
+    <div className="h-screen flex overflow-hidden">
+      <BrandingPanel />
 
-      {/* Central Card Container */}
-      <div className="relative w-full max-w-[480px] bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
-        {/* Header Section with Logo */}
-        <div className="pt-10 pb-2 flex justify-center">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="flex items-center justify-center size-8 rounded bg-primary-500/10 text-primary-500">
-              <LogoIcon />
-            </div>
-            <h2 className="text-gray-900 text-lg font-bold">RecruitHub</h2>
-          </div>
-        </div>
-
-        {/* Page Heading */}
-        <div className="px-8 pb-4 text-center">
-          <h1 className="text-gray-900 text-3xl font-black leading-tight tracking-[-0.033em] mb-3">
-            Forgot password?
-          </h1>
-          <p className="text-primary/60 text-sm px-2 font-normal leading-relaxed">
-            Enter the email associated with your account and we will send you an
-            email with instructions to reset your password.
-          </p>
-        </div>
-
-        {/* Form Section */}
-        <div className="p-8 pt-4 flex flex-col gap-12">
-          {/* Email Input Field */}
-          <label className="flex flex-col w-full group">
-            <p className="text-gray-900 text-sm font-bold leading-normal pb-2 uppercase tracking-wide">
-              Email address
-            </p>
-            <div className="relative flex w-full items-center">
-              <Input
-                {...register("email")}
-                type="email"
-                placeholder="name@company.com"
-                autoComplete="email"
-                className={`h-12 ${errors.email ? "border-destructive focus:ring-destructive" : ""}`}
-              />
-              <div className="absolute right-4 peer-focus:text-primary-500 transition-colors duration-200 pointer-events-none flex items-center">
-                <Mail className="size-5" />
-              </div>
-            </div>
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.email.message}
+      {/* Right Panel - Form Section */}
+      <div className="flex-1 bg-background overflow-y-auto scrollbar-hide h-full">
+        <div className="min-h-full flex items-center justify-center p-8">
+          <div className="w-full max-w-md space-y-8 animate-fade-in my-8">
+            <div className="text-center lg:text-left">
+              <h1 className="text-2xl font-bold text-foreground">
+                Forgot password?
+              </h1>
+              <p className="mt-2 text-muted-foreground">
+                Enter your email address and we'll send you instructions to
+                reset your password.
               </p>
-            )}
-          </label>
+            </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col gap-4">
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              onClick={handleSubmit(onSubmit)}
-              disabled={forgotPasswordMutation.isPending}
-            >
-              {forgotPasswordMutation.isPending ? (
-                <svg
-                  className="animate-spin h-5 w-5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-4 text-left">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <div className="relative">
+                    <Input
+                      id="email"
+                      {...register("email")}
+                      type="email"
+                      placeholder="name@company.com"
+                      autoComplete="email"
+                      className={`h-12 pr-12 ${
+                        errors.email
+                          ? "border-destructive focus:ring-destructive"
+                          : ""
+                      }`}
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors pointer-events-none">
+                      <Mail className="size-5" />
+                    </div>
+                  </div>
+                  {errors.email && (
+                    <p className="text-sm text-destructive">
+                      {errors.email.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2">
+                <Button
+                  type="submit"
+                  className="w-full h-12 gap-2"
+                  disabled={forgotPasswordMutation.isPending}
                 >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-              ) : (
-                <span className="truncate">Send Reset Instructions</span>
-              )}
-            </Button>
+                  {forgotPasswordMutation.isPending ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      Send Reset link
+                    </>
+                  )}
+                </Button>
 
-            {/* Back Link */}
-            <Link
-              to="/login"
-              className="flex items-center justify-center gap-2 text-sm hover:text-primary-500 transition-colors hover:underline"
-            >
-              <ArrowLeft className="size-4" />
-              <span className="truncate">Back to log in</span>
-            </Link>
+                <Link
+                  to="/login"
+                  className="group flex w-full items-center justify-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium h-10"
+                >
+                  <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
+                  Back to login
+                </Link>
+              </div>
+            </form>
+
+            <div className="text-center pt-8">
+              <p className="text-xs text-muted-foreground/60">
+                © 2025 RecruitHub. Having trouble?{" "}
+                <a
+                  href="#"
+                  className="underline hover:text-primary transition-colors"
+                >
+                  Contact Support
+                </a>
+              </p>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Simple Footer */}
-      {/* <div className="mt-8 text-center relative z-10">
-        <p className="text-xs text-[#897561]/70">
-          © 2025 RecruitHub Inc. Need help?{" "}
-          <a
-            href="#"
-            className="underline hover:text-primary-500 transition-colors"
-          >
-            Contact Support
-          </a>
-        </p>
-      </div> */}
     </div>
   );
 };
