@@ -12,9 +12,10 @@ import type { User } from "@/types";
 
 export interface LoginRequest {
   email: string;
-  password: string;
+  password?: string;
   mfaToken?: string;
   deviceId?: string;
+  tempToken?: string;
 }
 
 export interface LoginResponse {

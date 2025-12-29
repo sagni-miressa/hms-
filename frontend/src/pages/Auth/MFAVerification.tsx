@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import {
+  useNavigate,
+  useLocation,
+  Link,
+  useSearchParams,
+} from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -26,11 +31,16 @@ export const MFAVerificationPage = () => {
   const location = useLocation();
   const { login: setAuth } = useAuthStore();
 
-  // Get email and password from navigation state
-  const { email, password } = location.state || {};
+  // Get state from location or URL params (for OAuth flow)
+  const [searchParams] = useSearchParams();
+  const email = location.state?.email || searchParams.get("email");
+  const password = location.state?.password;
+  const isOAuth =
+    location.state?.isOAuth || searchParams.get("isOAuth") === "true";
+  const tempToken = location.state?.tempToken || searchParams.get("tempToken");
 
-  // Redirect to login if no credentials
-  if (!email || !password) {
+  // Redirect to login if no way to verify
+  if (!email || (!password && !tempToken)) {
     navigate("/login");
     return null;
   }
@@ -99,6 +109,7 @@ export const MFAVerificationPage = () => {
       email,
       password,
       mfaToken: data.mfaToken,
+      tempToken: tempToken || undefined,
     });
   };
 
@@ -180,7 +191,9 @@ export const MFAVerificationPage = () => {
 
             <div className="text-center lg:text-left">
               <h2 className="text-2xl font-bold text-foreground">
-                Two-Factor Authentication
+                {isOAuth
+                  ? "Google Account Verification"
+                  : "Two-Factor Authentication"}
               </h2>
               <p className="mt-2 text-muted-foreground">
                 Enter the 6-digit code from your authenticator app

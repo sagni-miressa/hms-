@@ -5,7 +5,11 @@
 
 import { OAuth2Client } from 'google-auth-library';
 import { prisma } from '@/config/database.js';
-import { generateAccessToken, generateRefreshToken } from './auth.service.js';
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  generateMFAPendingToken,
+} from './auth.service.js';
 import { sessionCache, SESSION_CACHE_TTL } from '@/config/redis.js';
 import { logger, logAudit } from '@/utils/logger.js';
 import type { AuthenticatedUser } from '@/types/index.js';
@@ -52,7 +56,13 @@ export const handleGoogleCallback = async (
   code: string,
   ipAddress?: string,
   userAgent?: string
-): Promise<{ accessToken: string; refreshToken: string; user: AuthenticatedUser }> => {
+): Promise<{
+  accessToken: string;
+  refreshToken: string;
+  user: AuthenticatedUser;
+  requiresMFA?: boolean;
+  mfaToken?: string;
+}> => {
   const client = getGoogleClient();
 
   try {
@@ -183,6 +193,17 @@ export const handleGoogleCallback = async (
       mfaEnabled: user.mfaEnabled,
     };
 
+    if (user.mfaEnabled) {
+      const tempToken = generateMFAPendingToken(authenticatedUser);
+      return {
+        accessToken: '', // No tokens yet
+        refreshToken: '',
+        user: authenticatedUser,
+        requiresMFA: true,
+        mfaToken: tempToken, // Re-using mfaToken field for the temp JWT
+      };
+    }
+
     const accessToken = generateAccessToken(authenticatedUser);
     const refreshToken = await generateRefreshToken(user.id, undefined, ipAddress, userAgent);
 
@@ -202,6 +223,7 @@ export const handleGoogleCallback = async (
       accessToken,
       refreshToken,
       user: authenticatedUser,
+      requiresMFA: false,
     };
   } catch (error) {
     logger.error('Google OAuth callback failed', {

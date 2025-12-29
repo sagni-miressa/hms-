@@ -28,7 +28,7 @@ export interface JWTPayload {
   email: string;
   roles: Role[];
   clearanceLevel: ClearanceLevel;
-  type: 'access' | 'refresh';
+  type: 'access' | 'refresh' | 'mfa_pending';
   iat?: number;
   exp?: number;
   iss?: string;

@@ -50,6 +50,28 @@ export const generateAccessToken = (user: AuthenticatedUser): string => {
 };
 
 /**
+ * Generate a short-lived token for MFA verification (used in OAuth)
+ */
+export const generateMFAPendingToken = (user: AuthenticatedUser): string => {
+  const payload: JWTPayload = {
+    sub: user.id,
+    email: user.email,
+    roles: user.roles,
+    clearanceLevel: user.clearanceLevel,
+    type: 'mfa_pending',
+  };
+
+  const options: jwt.SignOptions = {
+    expiresIn: '5m', // Valid for 5 minutes
+    issuer: SECURITY.JWT.ISSUER,
+    audience: SECURITY.JWT.AUDIENCE,
+    algorithm: SECURITY.JWT.ALGORITHM,
+  };
+
+  return jwt.sign(payload, process.env.JWT_ACCESS_PRIVATE_KEY!, options);
+};
+
+/**
  * Generate refresh token (long-lived)
  */
 export const generateRefreshToken = async (
@@ -326,16 +348,34 @@ const resetFailedLoginAttempts = async (userId: string): Promise<void> => {
  */
 export const login = async (
   email: string,
-  password: string,
+  password?: string,
   mfaToken?: string,
   deviceId?: string,
   ipAddress?: string,
-  userAgent?: string
+  userAgent?: string,
+  tempToken?: string
 ): Promise<{ accessToken: string; refreshToken: string; requiresMFA: boolean }> => {
-  // Find user
-  const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
-  });
+  let user;
+
+  if (tempToken) {
+    // Handling MFA verification for OAuth (Step 2)
+    try {
+      const payload = verifyAccessToken(tempToken); // verifyAccessToken uses the same secret
+      if (payload.type !== 'mfa_pending') {
+        throw new TokenInvalidError('Invalid MFA transition token');
+      }
+      user = await prisma.user.findUnique({
+        where: { id: payload.sub },
+      });
+    } catch (error) {
+      throw new TokenInvalidError('Invalid or expired MFA transition token');
+    }
+  } else {
+    // Normal password login (Step 1 or 2)
+    user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+  }
 
   if (!user) {
     logAudit({
@@ -383,36 +423,41 @@ export const login = async (
     throw new InvalidCredentialsError('Please verify your email address before logging in');
   }
 
-  // Verify password
-  const isPasswordValid = await verifyPassword(password, user.passwordHash);
-
-  if (!isPasswordValid) {
-    await handleFailedLogin(user.id, ipAddress);
-
-    logAudit({
-      userId: user.id,
-      action: 'LOGIN_FAILED',
-      details: { reason: 'Invalid password' },
-      ipAddress,
-      userAgent,
-      success: false,
-    });
-
-    // Alert on multiple failed logins
-    const failedCount =
-      (
-        await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { failedLoginCount: true },
-        })
-      )?.failedLoginCount || 0;
-
-    if (failedCount >= 3) {
-      const { alertFailedLogins } = await import('@/services/alert.service.js');
-      await alertFailedLogins(user.id, user.email, failedCount, ipAddress);
+  // Verify password (only if not using tempToken)
+  if (!tempToken) {
+    if (!password) {
+      throw new InvalidCredentialsError('Password is required');
     }
+    const isPasswordValid = await verifyPassword(password, user.passwordHash || '');
 
-    throw new InvalidCredentialsError();
+    if (!isPasswordValid) {
+      await handleFailedLogin(user.id, ipAddress);
+
+      logAudit({
+        userId: user.id,
+        action: 'LOGIN_FAILED',
+        details: { reason: 'Invalid password' },
+        ipAddress,
+        userAgent,
+        success: false,
+      });
+
+      // Alert on multiple failed logins
+      const failedCount =
+        (
+          await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { failedLoginCount: true },
+          })
+        )?.failedLoginCount || 0;
+
+      if (failedCount >= 3) {
+        const { alertFailedLogins } = await import('@/services/alert.service.js');
+        await alertFailedLogins(user.id, user.email, failedCount, ipAddress);
+      }
+
+      throw new InvalidCredentialsError();
+    }
   }
 
   // Check MFA

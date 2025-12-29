@@ -32,9 +32,10 @@ const registerSchema = z.object({
 
 const loginSchema = z.object({
   email: emailSchema,
-  password: z.string().min(1),
+  password: z.string().min(1).optional(),
   mfaToken: z.string().length(6).optional(),
   deviceId: z.string().optional(),
+  tempToken: z.string().optional(),
 });
 
 const refreshTokenSchema = z.object({
@@ -131,7 +132,7 @@ router.post(
   authRateLimit,
   validate({ body: loginSchema }),
   asyncHandler(async (req, res) => {
-    const { email, password, mfaToken, deviceId } = req.body;
+    const { email, password, mfaToken, deviceId, tempToken } = req.body;
 
     const result = await authService.login(
       email,
@@ -139,7 +140,8 @@ router.post(
       mfaToken,
       deviceId,
       req.ip,
-      req.headers['user-agent']
+      req.headers['user-agent'],
+      tempToken
     );
 
     const response: ApiResponse = {
@@ -783,6 +785,15 @@ router.get(
 
       // Redirect to frontend with tokens
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3005';
+
+      if ((result as any).requiresMFA) {
+        const redirectUrl = new URL('/mfa-verification', frontendUrl);
+        redirectUrl.searchParams.set('email', result.user.email);
+        redirectUrl.searchParams.set('isOAuth', 'true');
+        redirectUrl.searchParams.set('tempToken', (result as any).mfaToken);
+        return res.redirect(redirectUrl.toString());
+      }
+
       const redirectUrl = new URL('/oauth-success', frontendUrl);
       redirectUrl.searchParams.set('accessToken', result.accessToken);
       redirectUrl.searchParams.set('refreshToken', result.refreshToken);
