@@ -33,7 +33,8 @@ import NotFoundPage from "@/pages/NotFound";
 
 // Old pages for legacy routes
 import { HomePage } from "@/pages/old/Home";
-import { RegisterPage } from "@/pages/old/Register";
+import { RegisterPage } from "@/pages/Register";
+import { MFAVerificationPage } from "@/pages/MFAVerification";
 import { VerifyEmailPage } from "@/pages/old/VerifyEmail";
 import { ForgotPasswordPage } from "@/pages/old/ForgotPassword";
 import { ResetPasswordPage } from "@/pages/old/ResetPassword";
@@ -89,6 +90,14 @@ export const Router = () => {
             element={
               <GuestRoute>
                 <RegisterPage />
+              </GuestRoute>
+            }
+          />
+          <Route
+            path="/mfa-verification"
+            element={
+              <GuestRoute>
+                <MFAVerificationPage />
               </GuestRoute>
             }
           />

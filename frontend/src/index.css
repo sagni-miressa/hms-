@@ -7,6 +7,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide scrollbar utility */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+}
+
 /* RecruitHub Enterprise Design System
    Security-first, government-grade visual language
    8px grid system, WCAG 2.1 AA compliant
@@ -38,8 +49,8 @@
     --muted-foreground: 215 16% 47%;
     
     /* Accent - Subtle Blue */
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 210 16% 96%;
+    --accent-foreground: 215 16% 47%;
     
     /* Semantic Colors */
     --destructive: 0 72% 51%;
