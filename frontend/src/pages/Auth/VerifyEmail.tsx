@@ -336,7 +336,7 @@ export const VerifyEmailPage = () => {
       {/* Simple Footer */}
       <div className="mt-8 text-center relative z-10">
         <p className="text-xs text-[#897561]/70">
-          © 2024 RecruitHub Inc. Need help?{" "}
+          © 2025 RecruitHub Inc. Need help?{" "}
           <a
             href="#"
             className="underline hover:text-primary-500 transition-colors"

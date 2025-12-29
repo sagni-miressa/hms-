@@ -144,7 +144,7 @@ export const MFAVerificationPage = () => {
           </div>
 
           <p className="text-sm text-primary-foreground/60">
-            © 2024 RecruitHub. All rights reserved.
+            © 2025 RecruitHub. All rights reserved.
           </p>
         </div>
 
